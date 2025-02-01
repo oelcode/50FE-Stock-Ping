@@ -1,21 +1,25 @@
+
 ---
 
-# Nvidia 50 Series Founders Edition Stock Checker (UK) 🇬🇧
+# Nvidia 50 Series Founders Edition Stock Checker
 
 A Python script to monitor 50 Series Founders Edition graphics card stock, allowing you to immediately open a browser window to the product page and/or send notifications via Telegram when stock changes are detected.
 
-The script supports checking of all currently known 50 series Founders Edition, customisable check intervals (2 secs default), and notifications via sound, browser opening, and Telegram messages.
+The script supports checking of all currently known 50 series Founders Edition, customizable check intervals (10 secs default), and notifications via sound, browser opening, and Telegram messages.
 
 ---
 
 ## Features
 
+- **NEW - Support for all known locales**: The script has been updated to support all known locales.
+- **NEW - Quick config tool**: The new 'stockconfig.py' tool allows a quick way to ensure your config is properly setup to monitor the card(s) you want, and from the correct Nvidia store.
 - **Real-time Stock Monitoring**: Continuously checks NVIDIA's API for stock updates.
 - **Sound Alerts**: Plays a notification sound when stock is detected (Windows and macOS supported).
-- **Browser Auto Open**: Automatically opens the product page in your browser when stock is detected.
+- **Browser Auto Opening**: Automatically opens the product page in your browser when stock is detected.
 - **Status Updates**: Provides periodic status updates via console or Telegram.
 - **Telegram Notifications**: Sends alerts when stock status changes (e.g., in stock or out of stock).
-- **Telegram Status checking**: Use the `/status` command in Telegram to get the current status of the stock checker.
+- **Telegram Status Checking**: Use the `/status` command in Telegram to get the current status of the stock checker.
+- **SKU Validation**: Periodically (configurable) checks the API for updates to product information. Nvidia occasionally change this, so the script will warn you every 5 minutes for 25 minutes if there is a mismatch between the API information and the local configuration. Run 'stockconfig.py' to update your configuration
 
 ---
 
@@ -33,6 +37,8 @@ The script supports checking of all currently known 50 series Founders Edition, 
    ```bash
    50check.py
    config.py
+   stockconfig.py
+   locales.txt
    ```
 
 2. **Install dependencies**:
@@ -48,7 +54,7 @@ The script supports checking of all currently known 50 series Founders Edition, 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/oelcode/50FE-UK-Ping.git
+   git clone https://github.com/oelcode/50FE-Stock-Ping.git
    cd nvidia-stock-checker
    ```
 
@@ -71,9 +77,10 @@ The script supports checking of all currently known 50 series Founders Edition, 
 The `config.py` file contains all the configuration options. Here are the key settings:
 
 - **`PRODUCT_CONFIG_CARDS`**: Set the enabled flag for the cards you want to monitor.
-- **`NOTIFICATION_CONFIG`**: Enable or disable sound notifications and browser auto open (READ THE NOTICE BELOW.
-- **`TELEGRAM_CONFIG`**: All Telegram features are turned off by default. Configure your Telegram bot token and chat ID ([Setup guide](https://gist.github.com/nafiesl/4ad622f344cd1dc3bb1ecbe468ff9f8a))
-- **`API_CONFIG`**: Configure the NVIDIA API URL and parameters. (DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING)
+- **`NOTIFICATION_CONFIG`**: Enable or disable sound notifications, browser auto open, and logging of stock checks.
+- **`TELEGRAM_CONFIG`**: All Telegram features are turned off by default. Configure your Telegram bot token and chat ID ([Setup guide](https://gist.github.com/nafiesl/4ad622f344cd1dc3bb1ecbe468ff9f8a)).
+- **`API_CONFIG`**: Configure the NVIDIA API URL and parameters. (DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING).
+- **`SKU_CHECK_CONFIG`**: Configure the interval for refreshing SKUs (default: 3600 seconds).
 
 ---
 
@@ -101,7 +108,15 @@ If you have the browser auto-open enabled, I'd strongly recommend running the sc
 
 ### Running the Script
 
-To start monitoring NVIDIA stock, run the script with the following command:
+Before you start monitoring for stock, you need to run the quick config tool to setup your configuration options. This contains a list of known working locale options for you to choose from, but you can also enter a custom locale to check if it works.
+
+```bash
+python stockconfig.py
+```
+
+Once this has been done, you may edit 'config.py' for any further configuration before you may need (interval timings, Telegram bot credentials etc).
+
+When you're ready to run the script, run the below command:
 
 ```bash
 python 50check.py
@@ -127,6 +142,8 @@ The script supports several command-line arguments for customization. Most users
 | `--telegram-chat-id`   | Telegram chat ID (overrides configuration).                                 |
 | `--no-sound`           | Disable notification sounds.                                                |
 | `--no-browser`         | Disable automatic browser opening.                                          |
+| `--sku-check-interval` | Time between API product validation checks in seconds (default: 3600).                         |
+| `--log-stock-checks`   | Toggle the logging of stock checks to the console.                              |
 
 ### Example Commands
 
@@ -145,11 +162,16 @@ The script supports several command-line arguments for customization. Most users
    python 50check.py --check-interval 30 --cooldown 5
    ```
 
+4. **Enable logging of stock checks**:
+   ```bash
+   python 50check.py --log-stock-checks
+   ```
+
 ---
 
 ## Telegram Commands
 
-- **`/status`**: Get the current status of the stock checker, including runtime, requests, and monitored cards.
+- **`/status`**: Get the current status of the stock checker, including uptime, # of API requests, and the cards being monitored.
 
 ---
 
@@ -161,9 +183,9 @@ When stock changes are detected, the script sends a Telegram message like this:
 
 ```
 🔔 NVIDIA Stock Alert
-✅ IN STOCK: GeForce RTX 4090 (5090)
-💰 Price: £1,499.00
-🔗 Link: https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/
+✅ IN STOCK: GeForce RTX 5090
+💰 Price: £1,939.00
+🔗 Link: https://www.nvidia.com/en-gb/geforce/graphics-cards/50-series/rtx-5090/
 ```
 
 ### Sound Notifications
@@ -183,18 +205,20 @@ If enabled, the script will automatically open the product page in your default 
 ### Console Output
 
 ```
-[2023-10-25 14:35:47] ✅ IN STOCK: GeForce RTX 4090 (5090) - £1,499.00
-[2023-10-25 14:35:47] 🔗 NVIDIA Link: https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/
+[2023-10-25 14:35:47] ℹ️ Checking stock for GeForce RTX 5090...
+[2023-10-25 14:35:47] ✅ IN STOCK: GeForce RTX 5090 - £1,939.00
+[2023-10-25 14:35:47] 🔗 NVIDIA Link: https://www.nvidia.com/en-gb/geforce/graphics-cards/50-series/rtx-5090/
 ```
 
 ### Telegram Startup Message
 
 ```
 🚀 NVIDIA Stock Checker Started Successfully!
-🎯 Monitoring: GeForce RTX 4090, GeForce RTX 4080
-⏱️ Check Interval: 60 seconds
+🎯 Monitoring: GeForce RTX 5090, GeForce RTX 5080
+⏱️ Check Interval: 10 seconds
 🔔 Notifications: Enabled
 🌐 Browser Opening: Enabled
+📢 Type /status to get the latest script statistics.
 ```
 
 ---
@@ -212,6 +236,8 @@ Contributions are welcome! If you'd like to contribute, please follow these step
 ## To do
 
 - Add proxy functionality to help spread API requests across multiple IP's (in case Nvidia start blocking IP's for hammering their API - sorry Nvidia!).
+- Add support for more regions and currencies - the list is being updated as they are discovered.
+- Improve error handling for API rate limiting - Currently, failed checks are handled quietly, and the script keeps retrying until it works again. This hasn't been a big issue as the API seems to be quite robust, but I want to be prepared in case Nvidia get stricter.
 
 ---
 
