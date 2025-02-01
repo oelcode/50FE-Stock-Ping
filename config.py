@@ -2,7 +2,7 @@
 # Product Configuration
 # =================================
 # Set to True/False to enable/disable checking for specific products
-PRODUCT_CONFIG_CARDS = {   
+PRODUCT_CONFIG_CARDS = {
     "NVIDIA RTX 5090": {
         "enabled": False
     },
@@ -13,7 +13,12 @@ PRODUCT_CONFIG_CARDS = {
 
 LOCALE_CONFIG = {
     "locale": "en-gb",  # Locale to use for the NVIDIA store (en-gb, de-de, etc)
+    "country": "United Kingdom",  # Name of the country corresponding to the locale
     "currency": "£"    # Currency symbol to use in notifications (£, €, etc)
+}
+
+SKU_CHECK_CONFIG = {
+    "interval": 3600,  # How often to check for the Nvida API for product info changes (in seconds, default is 3600 = 1 hour)
 }
 
 # =================================
@@ -21,21 +26,22 @@ LOCALE_CONFIG = {
 # =================================
 NOTIFICATION_CONFIG = {
     "play_sound": True,    # Whether to play a sound when stock is found
-    "open_browser": True,  # Whether to auto open the browser when stock is found
+    "open_browser": True,  # Whether to auto open the browser when stock is found (DONT USE WITH TELEGRAM NOTIFICATIONS - SEE README)
+    "log_stock_checks": False  # Whether each stock check is logged in the console (default = False)
 }
 # =================================
-# Status Updates Configuration
+# Script Health Updates Configuration
 # This sends a notification to the console and/or Telegram to show you that the script is still running properly.
 # THIS IS NOT THE STOCK NOTIFIER.
 # =================================
 STATUS_UPDATES = {
     "console": {
-        "enabled": True,              # Enable/disable console status updates
-        "interval": 15 * 60,         # Console update interval in seconds (15 minutes default - edit the first number)
+        "enabled": True,              # Enable/disable script health updates in the console
+        "interval": 15 * 60,         # Console script health update interval in seconds (15 minutes default - edit the first number)
     },
     "telegram": {
-        "enabled": False,              # Enable/disable Telegram status updates
-        "interval": 30 * 60,         # Telegram update interval in seconds (30 minutes default - edit the first number)
+        "enabled": False,              # Enable/disable script health updates on Telegram
+        "interval": 30 * 60,         # Telegram script health update interval in seconds (30 minutes default - edit the first number)
     }
 }
 
@@ -43,9 +49,9 @@ STATUS_UPDATES = {
 # Telegram Configuration
 # =================================
 TELEGRAM_CONFIG = {
-    "enabled": False,             # Master switch for Telegram functionality (WARNING DONT USE BROWSER OPEN AT THE SAME TIME)
-    "bot_token": "XXXXXXXXXXXX",  # Your bot token
-    "chat_id": "XXXXXXXX",        # Your chat ID
+    "enabled": False,             # Master switch for Telegram functionality (WARNING DONT USE AUTO BROWSER OPEN AT THE SAME TIME - SEE README)
+    "bot_token": "XXXXXXX",  # Your bot token
+    "chat_id": "XXXXXXX",        # Your chat ID
     "polling_timeout": 30,        # Seconds to wait in each polling request (Leave at default if you don't know what this means)
     "polling_retries": 3,         # Number of retries before entering backoff (Leave at default if you don't know what this means)
     "initial_backoff": 60,        # Initial backoff time in seconds (Leave at default if you don't know what this means)
@@ -70,8 +76,7 @@ API_CONFIG = {
         "Origin": "https://marketplace.nvidia.com",
         "Connection": "keep-alive",
     },
-    "base_url": f"https://marketplace.nvidia.com/{LOCALE_CONFIG["locale"]}/consumer/graphics-cards/?locale={LOCALE_CONFIG["locale"]}&page=1&limit=12&category=GPU&manufacturer=NVIDIA&manufacturer_filter=NVIDIA~2,ASUS~31,GAINWARD~5,GIGABYTE~18,INNO3D~3,KFA2~1,MSI~22,PALIT~10,PNY~7,ZOTAC~14"
-}
+    "base_url": f"https://marketplace.nvidia.com/{LOCALE_CONFIG['locale']}/consumer/graphics-cards/?locale={LOCALE_CONFIG['locale']}&page=1&limit=12&category=GPU&manufacturer=NVIDIA&manufacturer_filter=NVIDIA~2,ASUS~31,GAINWARD~5,GIGABYTE~18,INNO3D~3,KFA2~1,MSI~22,PALIT~10,PNY~7,ZOTAC~14"}
 SKU_CHECK_API_CONFIG = {
     "url": "https://api.nvidia.partners/edge/product/search"
 }
