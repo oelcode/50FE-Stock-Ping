@@ -659,7 +659,7 @@ def main():
             if STATUS_UPDATES["console"]["enabled"]:
                 print(f"[{get_timestamp()}] Script Health Update (to Console): Every {STATUS_UPDATES['console']['interval']} seconds")
             else:
-                print(f"[{get_timestamp()}] Script Check Health Update (to Console): Disabled")
+                print(f"[{get_timestamp()}] Script Health Update (to Console): Disabled")
                 
             if STATUS_UPDATES["telegram"]["enabled"] and TELEGRAM_CONFIG["enabled"]:
                 print(f"[{get_timestamp()}] Script Check Health Update (to Telegram): Every {STATUS_UPDATES['telegram']['interval']} seconds")
