@@ -19,7 +19,6 @@ if platform.system() == 'Windows':
 
 # Import configuration
 from config import (
-    PRODUCT_CONFIG,
     PRODUCT_CONFIG_CARDS,
     STATUS_UPDATES,
     TELEGRAM_CONFIG,
@@ -29,11 +28,7 @@ from config import (
     LOCALE_CONFIG
 )
 
-# Get enabled SKUs based on configuration
-AVAILABLE_SKUS = {sku: config["name"] 
-                 for sku, config in PRODUCT_CONFIG.items() 
-                 if config["enabled"]}
-
+# Get enabled Cards based on configuration
 AVAILABLE_CARDS = {card: config["enabled"]
                  for card, config in PRODUCT_CONFIG_CARDS.items()
                  if config["enabled"]}
@@ -450,25 +445,23 @@ def run_test(selected_cards):
             if running:
                 time.sleep(params['check_interval'])
 
-def list_available_skus():
-    """Print all available SKUs and their descriptions"""
+def list_available_cards():
+    """Print all available cards and their descriptions"""
     print("\nProduct Configuration:")
-    for sku, config in PRODUCT_CONFIG.items():
+    for card, config in PRODUCT_CONFIG_CARDS.items():
         status = "✅ Enabled" if config["enabled"] else "❌ Disabled"
-        print(f"  {sku}: {config['name']} - {status}")
+        print(f"  {card} - {status}")
     print("\nCurrently monitoring:")
-    for sku, name in AVAILABLE_SKUS.items():
-        print(f"  {sku}: {name}")
+    for card, name in AVAILABLE_CARDS.items():
+        print(f"  {card}")
     print()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='NVIDIA Stock Checker')
-    parser.add_argument('--skus', type=str, nargs='+',
-                      help='SKUs to monitor (space-separated list, overrides configuration)')
     parser.add_argument('--test', action='store_true', 
                       help='Run in test mode to check notification system')
-    parser.add_argument('--list-skus', action='store_true',
-                      help='List all available SKUs and exit')
+    parser.add_argument('--list-cards', action='store_true',
+                      help='List all available cards and exit')
     parser.add_argument('--cooldown', type=int, default=params['cooldown'],
                       help=f'Cooldown period in seconds after finding stock (default: {params["cooldown"]})')
     parser.add_argument('--check-interval', type=int, default=params['check_interval'],
@@ -498,21 +491,11 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    if args.list_skus:
-        list_available_skus()
+    if args.list_cards:
+        list_available_cards()
         exit(0)
-    
-    # If SKUs specified via command line, use those instead of configuration
-    selected_skus = args.skus if args.skus else list(AVAILABLE_SKUS.keys())
 
     selected_cards = list(AVAILABLE_CARDS.keys())
-    
-    # Validate SKUs
-    invalid_skus = [sku for sku in selected_skus if sku not in PRODUCT_CONFIG]
-    if invalid_skus:
-        print(f"Error: Invalid SKU(s): {', '.join(invalid_skus)}")
-        list_available_skus()
-        exit(1)
     
     # Override params with command line arguments if provided
     params['cooldown'] = args.cooldown
@@ -617,7 +600,7 @@ if __name__ == "__main__":
             print(f"[{get_timestamp()}] Sound Notifications: {'Enabled' if NOTIFICATION_CONFIG['play_sound'] else 'Disabled'}")
             print(f"[{get_timestamp()}] Browser Opening: {'Enabled' if NOTIFICATION_CONFIG['open_browser'] else 'Disabled'}")
             print(f"[{get_timestamp()}] Tip: Run with --test to test notifications")
-            print(f"[{get_timestamp()}] Tip: Run with --list-skus to see all available SKUs")
+            print(f"[{get_timestamp()}] Tip: Run with --list-cards to see all available cards")
             
             while running:
                 try:

@@ -2,29 +2,6 @@
 # Product Configuration
 # =================================
 # Set to True/False to enable/disable checking for specific products
-PRODUCT_CONFIG = {
-    "NVGFT590": {  # RTX 5090 FE
-        "enabled": False,
-        "name": "RTX 5090 FE"
-    },
-    # "PROGFTNV590": {  # RTX 5090 FE
-    #     "enabled": True,
-    #     "name": "RTX 5090 FE"
-    # },
-    "NVGFT580": {  # RTX 5080 FE
-        "enabled": False,
-        "name": "RTX 5080 FE"
-    },
-    "NVGFT570T": {  # RTX 5070 Ti FE
-        "enabled": False,
-        "name": "RTX 5070 Ti FE"
-    },
-    "NVGFT570": {  # RTX 5070 FE
-        "enabled": False,
-        "name": "RTX 5070 FE"
-    }
-}
-
 PRODUCT_CONFIG_CARDS = {   
     "NVIDIA RTX 5090": {
         "enabled": False
@@ -35,8 +12,8 @@ PRODUCT_CONFIG_CARDS = {
 }
 
 LOCALE_CONFIG = {
-    "locale": "en-gb",
-    "currency": "£"
+    "locale": "en-gb",  # Locale to use for the NVIDIA store (en-gb, de-de, etc)
+    "currency": "£"    # Currency symbol to use in notifications (£, €, etc)
 }
 
 # =================================
@@ -54,7 +31,7 @@ NOTIFICATION_CONFIG = {
 STATUS_UPDATES = {
     "console": {
         "enabled": True,              # Enable/disable console status updates
-        "interval": 1 * 60,         # Console update interval in seconds (15 minutes default - edit the first number)
+        "interval": 15 * 60,         # Console update interval in seconds (15 minutes default - edit the first number)
     },
     "telegram": {
         "enabled": False,              # Enable/disable Telegram status updates
