@@ -7,6 +7,21 @@ A Python script to monitor 50 Series Founders Edition graphics card stock, allow
 
 The script supports checking of all currently known 50 series Founders Edition, customizable check intervals (10 secs default), and notifications via sound, browser opening, and Telegram messages.
 
+#### Supported Locales
+| Country         | Locale  | Currency | Notes |
+|----------------|--------|----------|------------------------------------------------|
+| 🇦🇹 Austria        | de-at  | €        |                                                |
+| 🇩🇰 Denmark        | da-dk  | kr       |                                                |
+| 🇫🇮 Finland        | fi-fi  | €        |                                                |
+| 🇫🇷 France         | fr-fr  | €        |                                                |
+| 🇩🇪 Germany        | de-de  | €        |                                                |
+| 🇮🇹 Italy          | it-it  | €        |                                                |
+| 🇳🇱 Netherlands    | nl-nl  | €        |                                                |
+| 🇪🇸 Spain          | es-es  | €        |                                                |
+| 🇸🇪 Sweden         | sv-se  | kr       |                                                |
+| 🇬🇧 United Kingdom | en-gb  | £        |                                                |
+| 🇺🇸 United States  | en-us  | $        | ⚠️ API endpoint disabled at time of writing.  |
+
 ---
 
 ## Features
