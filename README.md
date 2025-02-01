@@ -4,14 +4,13 @@
 
 A Python script to monitor 50 Series Founders Edition graphics card stock, allowing you to immediately open a browser window to the product page and/or send notifications via Telegram when stock changes are detected.
 
-The script supports checking of all current 50 series Founders Edition SKU's, customisable check intervals (2 secs default), and notifications via sound, browser opening, and Telegram messages.
+The script supports checking of all currently known 50 series Founders Edition, customisable check intervals (2 secs default), and notifications via sound, browser opening, and Telegram messages.
 
 ---
 
 ## Features
 
 - **Real-time Stock Monitoring**: Continuously checks NVIDIA's API for stock updates.
-- **Customisable SKUs**: Monitor specific graphics cards by SKU.
 - **Sound Alerts**: Plays a notification sound when stock is detected (Windows and macOS supported).
 - **Browser Auto Open**: Automatically opens the product page in your browser when stock is detected.
 - **Status Updates**: Provides periodic status updates via console or Telegram.
@@ -71,7 +70,7 @@ The script supports checking of all current 50 series Founders Edition SKU's, cu
 
 The `config.py` file contains all the configuration options. Here are the key settings:
 
-- **`PRODUCT_CONFIG`**: Set the enabled flag for the SKUs you want to monitor.
+- **`PRODUCT_CONFIG_CARDS`**: Set the enabled flag for the cards you want to monitor.
 - **`NOTIFICATION_CONFIG`**: Enable or disable sound notifications and browser auto open (READ THE NOTICE BELOW.
 - **`TELEGRAM_CONFIG`**: All Telegram features are turned off by default. Configure your Telegram bot token and chat ID ([Setup guide](https://gist.github.com/nafiesl/4ad622f344cd1dc3bb1ecbe468ff9f8a))
 - **`API_CONFIG`**: Configure the NVIDIA API URL and parameters. (DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING)
@@ -114,9 +113,8 @@ The script supports several command-line arguments for customization. Most users
 
 | Argument               | Description                                                                 |
 |------------------------|-----------------------------------------------------------------------------|
-| `--skus`               | Space-separated list of SKUs to monitor (overrides configuration).          |
 | `--test`               | Run in test mode to check the notification system.                          |
-| `--list-skus`          | List all available SKUs and exit.                                           |
+| `--list-cards`          | List all available cards and exit.                                           |
 | `--cooldown`           | Cooldown period in seconds after finding stock (default: 10).               |
 | `--check-interval`     | Time between checks in seconds (default: 60).                               |
 | `--console-status`     | Enable console status updates.                                              |
@@ -132,22 +130,17 @@ The script supports several command-line arguments for customization. Most users
 
 ### Example Commands
 
-1. **Monitor specific SKUs**:
-   ```bash
-   python 50check.py --skus 5090 4080
-   ```
-
-2. **Run in test mode**:
+1. **Run in test mode**:
    ```bash
    python 50check.py --test
    ```
 
-3. **List available SKUs**:
+2. **List available cards**:
    ```bash
-   python 50check.py --list-skus
+   python 50check.py --list-cards
    ```
 
-4. **Custom check interval and cooldown**:
+3. **Custom check interval and cooldown**:
    ```bash
    python 50check.py --check-interval 30 --cooldown 5
    ```
@@ -156,7 +149,7 @@ The script supports several command-line arguments for customization. Most users
 
 ## Telegram Commands
 
-- **`/status`**: Get the current status of the stock checker, including runtime, requests, and monitored SKUs.
+- **`/status`**: Get the current status of the stock checker, including runtime, requests, and monitored cards.
 
 ---
 
