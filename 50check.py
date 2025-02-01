@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import signal
 import sys
 import threading
+import traceback
 
 # Import winsound only on Windows
 if platform.system() == 'Windows':
@@ -19,10 +20,13 @@ if platform.system() == 'Windows':
 # Import configuration
 from config import (
     PRODUCT_CONFIG,
+    PRODUCT_CONFIG_CARDS,
     STATUS_UPDATES,
     TELEGRAM_CONFIG,
     NOTIFICATION_CONFIG,
-    API_CONFIG
+    API_CONFIG,
+    SKU_CHECK_API_CONFIG,
+    LOCALE_CONFIG
 )
 
 # Get enabled SKUs based on configuration
@@ -30,11 +34,18 @@ AVAILABLE_SKUS = {sku: config["name"]
                  for sku, config in PRODUCT_CONFIG.items() 
                  if config["enabled"]}
 
+AVAILABLE_CARDS = {card: config["enabled"]
+                 for card, config in PRODUCT_CONFIG_CARDS.items()
+                 if config["enabled"]}
+
 # API configuration
 API_URL = API_CONFIG["url"]
 params = API_CONFIG["params"]
 headers = API_CONFIG["headers"]
 NVIDIA_BASE_URL = API_CONFIG["base_url"]
+
+# Locale configuration
+currency = LOCALE_CONFIG["currency"]
 
 # Initialize global variables
 def init_globals():
@@ -201,7 +212,7 @@ def generate_status_message():
 ⏱️ Running for: {format_duration(runtime)}
 📈 Requests: {successful_requests:,} successful, {failed_requests:,} failed
 {status_check} Last check: {last_check_str} ({status_text})
-🎯 Monitoring: {', '.join(AVAILABLE_SKUS.values())}"""
+🎯 Monitoring: {', '.join(AVAILABLE_CARDS.keys())}"""
 
 async def send_startup_message():
     """Send a startup message via Telegram with monitoring details"""
@@ -271,7 +282,7 @@ def play_notification_sound():
     else:  # Linux or other systems
         print(f"[{get_timestamp()}] ℹ️ Sound not supported on this operating system")
 
-def send_stock_notification(product_name, sku, price, product_url, in_stock):
+def send_stock_notification(sku, price, product_url, in_stock):
     """Send stock notification via Telegram"""
     if not running:
         return
@@ -283,8 +294,8 @@ def send_stock_notification(product_name, sku, price, product_url, in_stock):
 
     status = "✅ IN STOCK" if in_stock else "❌ OUT OF STOCK"
     message = f"""🔔 NVIDIA Stock Alert
-{status}: {product_name} ({sku})
-💰 Price: £{price}
+{status}: {sku}
+💰 Price: {currency}{price}
 🔗 Link: {product_url}"""
 
     try:
@@ -303,6 +314,31 @@ def notify_stock_available(product_url):
             print(f"[{get_timestamp()}] ⚠️ Failed to open browser: {e}")
     
     play_notification_sound()
+
+def get_skus(selected_cards):
+    """Get SKUs based on selected cards"""
+    skus = []
+
+    sku_check_params = {
+        "locale": API_CONFIG["params"]["locale"],
+        "page": 1,
+        "limit": 12,
+        "manufacturer": "NVIDIA",
+    }
+    response = requests.get(SKU_CHECK_API_CONFIG["url"], params=sku_check_params, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+
+    if "searchedProducts" in data and isinstance(data["searchedProducts"]["productDetails"], list):
+        for product in data["searchedProducts"]["productDetails"]:
+            if "productSKU" in product and "displayName" in product:
+                sku = product["productSKU"]
+                name = product["displayName"]
+                if name in PRODUCT_CONFIG_CARDS and PRODUCT_CONFIG_CARDS[name]["enabled"]:
+                    if name in selected_cards:
+                        skus.append(sku)
+
+    return skus
 
 def check_nvidia_stock(skus):
     """Check stock for each SKU individually"""
@@ -328,6 +364,7 @@ def check_nvidia_stock(skus):
             return
             
         try:
+            print(f"[{get_timestamp()}] ℹ️ Checking stock for {sku}...")
             # Query one SKU at a time
             current_params = {**params, "skus": sku}
             
@@ -346,32 +383,27 @@ def check_nvidia_stock(skus):
                     is_active = item.get("is_active", "false") == "true"
                     price = item.get("price", "Unknown Price")
                     product_url = item.get("product_url") or NVIDIA_BASE_URL
-                    
-                    # Remove _UK suffix for matching
-                    base_sku = api_sku.split('_')[0] if '_' in api_sku else api_sku
-                    
-                    if base_sku in AVAILABLE_SKUS:
-                        product_name = AVAILABLE_SKUS[base_sku]
-                        
-                        # Check if stock status has changed
-                        if api_sku not in last_stock_status or last_stock_status[api_sku] != is_active:
-                            last_stock_status[api_sku] = is_active
-                            timestamp = get_timestamp()
 
-                            if is_active:
-                                print(f"[{timestamp}] ✅ IN STOCK: {product_name} ({base_sku}) - £{price}")
-                                print(f"[{timestamp}] 🔗 NVIDIA Link: {product_url}")
-                                notify_stock_available(product_url)
-                                # Send Telegram notification
-                                send_stock_notification(product_name, base_sku, price, product_url, True)
-                                time.sleep(params['cooldown'])
-                            else:
-                                print(f"[{timestamp}] ❌ OUT OF STOCK: {product_name} ({base_sku}) - £{price}")
-                                send_stock_notification(product_name, base_sku, price, product_url, False)
+                    print(f"[{get_timestamp()}] ℹ️ ({sku}) is currently {'active' if is_active else 'inactive'}")
+                    
+                    # Check if stock status has changed
+                    if api_sku not in last_stock_status or last_stock_status[api_sku] != is_active or product_url != NVIDIA_BASE_URL:
+                        last_stock_status[api_sku] = is_active
+                        timestamp = get_timestamp()
+
+                        if is_active:
+                            print(f"[{timestamp}] ✅ IN STOCK: {sku} - {currency}{price}")
+                            print(f"[{timestamp}] 🔗 NVIDIA Link: {product_url}")
+                            notify_stock_available(product_url)
+                            # Send Telegram notification
+                            send_stock_notification(sku, price, product_url, True)
+                            time.sleep(params['cooldown'])
+                        else:
+                            print(f"[{timestamp}] ❌ OUT OF STOCK: {sku} - {currency}{price}")
+                            send_stock_notification(sku, price, product_url, False)
                 else:
                     # Empty listMap means product not in system
-                    if sku in AVAILABLE_SKUS:
-                        print(f"[{get_timestamp()}] ℹ️ {AVAILABLE_SKUS[sku]} ({sku}) is not currently in the system")
+                    print(f"[{get_timestamp()}] ℹ️ ({sku}) is not currently in the system")
             
             # Small delay between requests to be nice to the API
             if running:
@@ -383,12 +415,12 @@ def check_nvidia_stock(skus):
             last_check_time = datetime.now()
             print(f"[{get_timestamp()}] ❌ API request failed for {sku}: {e}")
 
-def run_test(skus):
+def run_test(selected_cards):
     """Run a test of the notification system then transition to normal monitoring"""
     system = platform.system()
     print(f"[{get_timestamp()}] 🧪 Running test mode...")
     print(f"[{get_timestamp()}] Operating System: {system}")
-    print(f"[{get_timestamp()}] Monitoring SKUs: {', '.join(skus)}")
+    print(f"[{get_timestamp()}] Monitoring Cards: {', '.join(selected_cards)}")
     
     test_url = NVIDIA_BASE_URL
     print(f"[{get_timestamp()}] Testing stock notification...")
@@ -397,7 +429,7 @@ def run_test(skus):
     
     if TELEGRAM_CONFIG["enabled"] and telegram_bot and telegram_bot.connected:
         print(f"[{get_timestamp()}] Testing Telegram notification...")
-        send_stock_notification("Test Product", "TEST", "9.99", test_url, True)
+        send_stock_notification("TEST", "9.99", test_url, True)
         print(f"[{get_timestamp()}] Telegram test message sent.")
     
     # Simulate cooldown period
@@ -409,6 +441,7 @@ def run_test(skus):
     print(f"[{get_timestamp()}] Transitioning to normal monitoring mode...")
     while running:
         try:
+            skus = get_skus(selected_cards)
             check_nvidia_stock(skus)
             if running:
                 time.sleep(params['check_interval'])
@@ -471,6 +504,8 @@ if __name__ == "__main__":
     
     # If SKUs specified via command line, use those instead of configuration
     selected_skus = args.skus if args.skus else list(AVAILABLE_SKUS.keys())
+
+    selected_cards = list(AVAILABLE_CARDS.keys())
     
     # Validate SKUs
     invalid_skus = [sku for sku in selected_skus if sku not in PRODUCT_CONFIG]
@@ -560,12 +595,12 @@ if __name__ == "__main__":
                 TELEGRAM_CONFIG["enabled"] = False
 
         if args.test:
-            run_test(selected_skus)
+            run_test(selected_cards)
         else:
             system = platform.system()
             print(f"[{get_timestamp()}] Stock checker started. Monitoring for changes...")
             print(f"[{get_timestamp()}] Operating System: {system}")
-            print(f"[{get_timestamp()}] Monitoring SKUs: {', '.join(selected_skus)}")
+            print(f"[{get_timestamp()}] Monitoring Cards: {', '.join(selected_cards)}")
             print(f"[{get_timestamp()}] Check Interval: {params['check_interval']} seconds")
             print(f"[{get_timestamp()}] Cooldown Period: {params['cooldown']} seconds")
             
@@ -586,11 +621,13 @@ if __name__ == "__main__":
             
             while running:
                 try:
-                    check_nvidia_stock(selected_skus)
+                    skus = get_skus(selected_cards)
+                    check_nvidia_stock(skus)
                     if running:
                         time.sleep(params['check_interval'])
                 except Exception as e:
                     print(f"[{get_timestamp()}] ❌ Error during monitoring: {str(e)}")
+                    print(traceback.format_exc())
                     if running:
                         time.sleep(params['check_interval'])
                         
@@ -601,4 +638,3 @@ if __name__ == "__main__":
         running = False
         if telegram_bot and loop_manager:
             loop_manager.run_coroutine(telegram_bot.stop())
-            

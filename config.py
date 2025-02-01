@@ -7,6 +7,10 @@ PRODUCT_CONFIG = {
         "enabled": False,
         "name": "RTX 5090 FE"
     },
+    # "PROGFTNV590": {  # RTX 5090 FE
+    #     "enabled": True,
+    #     "name": "RTX 5090 FE"
+    # },
     "NVGFT580": {  # RTX 5080 FE
         "enabled": False,
         "name": "RTX 5080 FE"
@@ -19,6 +23,20 @@ PRODUCT_CONFIG = {
         "enabled": False,
         "name": "RTX 5070 FE"
     }
+}
+
+PRODUCT_CONFIG_CARDS = {   
+    "NVIDIA RTX 5090": {
+        "enabled": False
+    },
+    "NVIDIA RTX 5080": {
+        "enabled": False
+    }
+}
+
+LOCALE_CONFIG = {
+    "locale": "en-gb",
+    "currency": "£"
 }
 
 # =================================
@@ -36,7 +54,7 @@ NOTIFICATION_CONFIG = {
 STATUS_UPDATES = {
     "console": {
         "enabled": True,              # Enable/disable console status updates
-        "interval": 15 * 60,         # Console update interval in seconds (15 minutes default - edit the first number)
+        "interval": 1 * 60,         # Console update interval in seconds (15 minutes default - edit the first number)
     },
     "telegram": {
         "enabled": False,              # Enable/disable Telegram status updates
@@ -64,7 +82,7 @@ TELEGRAM_CONFIG = {
 API_CONFIG = {
     "url": "https://api.store.nvidia.com/partner/v1/feinventory",
     "params": {
-        "locale": "en-gb",    # Change locale if needed
+        "locale": LOCALE_CONFIG["locale"],
         "cooldown": 120,       # Seconds to wait after finding stock before resuming checks (60 seconds default)
         "check_interval": 10   # Seconds between checks (10secs default)
     },
@@ -75,6 +93,9 @@ API_CONFIG = {
         "Origin": "https://marketplace.nvidia.com",
         "Connection": "keep-alive",
     },
-    "base_url": "https://marketplace.nvidia.com/en-gb/consumer/graphics-cards/?locale=en-gb&page=1&limit=12&category=GPU&manufacturer=NVIDIA&manufacturer_filter=NVIDIA~2,ASUS~31,GAINWARD~5,GIGABYTE~18,INNO3D~3,KFA2~1,MSI~22,PALIT~10,PNY~7,ZOTAC~14"
+    "base_url": f"https://marketplace.nvidia.com/{LOCALE_CONFIG["locale"]}/consumer/graphics-cards/?locale={LOCALE_CONFIG["locale"]}&page=1&limit=12&category=GPU&manufacturer=NVIDIA&manufacturer_filter=NVIDIA~2,ASUS~31,GAINWARD~5,GIGABYTE~18,INNO3D~3,KFA2~1,MSI~22,PALIT~10,PNY~7,ZOTAC~14"
+}
+SKU_CHECK_API_CONFIG = {
+    "url": "https://api.nvidia.partners/edge/product/search"
 }
 # LEAVE THIS SECTION ALONE IF YOU DON'T KNOW WHAT THIS MEANS.
