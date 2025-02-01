@@ -1,0 +1,11 @@
+Austria,de-at,€
+Denmark,da-dk,kr
+Finland,fi-fi,€
+France,fr-fr,€
+Germany,de-de,€
+Italy,it-it,€
+Netherlands,nl-nl,€
+Spain,es-es,€
+Sweden,sv-se,kr
+United Kingdom,en-gb,£
+United States,en-us,$
