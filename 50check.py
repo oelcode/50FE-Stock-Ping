@@ -8,6 +8,7 @@ import telegram
 from telegram.ext import Application, CommandHandler
 import asyncio
 from datetime import datetime, timedelta
+import json
 import signal
 import sys
 import threading
@@ -22,6 +23,7 @@ from config import (
     PRODUCT_CONFIG_CARDS,
     STATUS_UPDATES,
     TELEGRAM_CONFIG,
+    NTFY_CONFIG,
     NOTIFICATION_CONFIG,
     API_CONFIG,
     SKU_CHECK_API_CONFIG,
@@ -324,9 +326,6 @@ def send_telegram_status():
 
 def play_notification_sound():
     """Play notification sound using the appropriate method for the OS"""
-    if not NOTIFICATION_CONFIG["play_sound"] or not running:
-        return
-
     system = platform.system()
     
     if system == 'Windows':
@@ -344,11 +343,25 @@ def play_notification_sound():
     else:  # Linux or other systems
         print(f"[{get_timestamp()}] ℹ️ Sound not supported on this operating system")
 
-def send_stock_notification(sku, price, product_url, in_stock):
-    """Send stock notification via Telegram"""
+def dispatch_stock_notifications(sku, price, product_url, in_stock):
+    """Send out stock notifications according to the config"""
     if not running:
         return
-    if not TELEGRAM_CONFIG["enabled"] or not telegram_bot or not telegram_bot.connected:
+    
+    if in_stock:
+        if NOTIFICATION_CONFIG["open_browser"]:
+            open_browser()
+        if NOTIFICATION_CONFIG["play_sound"]:
+            play_notification_sound()
+
+    if TELEGRAM_CONFIG["enabled"]:
+        send_telegram_notification(sku, price, product_url, in_stock)
+    if NTFY_CONFIG["enabled"]:
+        send_ntfy_notification(sku, price, product_url, in_stock)
+
+def send_telegram_notification(sku, price, product_url, in_stock):
+    """Send stock notification via Telegram"""
+    if not telegram_bot or not telegram_bot.connected:
         return
     if not loop_manager:
         print(f"[{get_timestamp()}] ⚠️ Cannot send Telegram notification: Loop manager not initialized")
@@ -365,17 +378,34 @@ def send_stock_notification(sku, price, product_url, in_stock):
     except Exception as e:
         print(f"[{get_timestamp()}] ❌ Failed to send Telegram notification: {str(e)}")
 
-def notify_stock_available(product_url):
-    """Open browser immediately and play notification sound after"""
+def send_ntfy_notification(sku, price, product_url, in_stock):
+    status = "✅ IN STOCK" if in_stock else "❌ OUT OF STOCK"
+    actions = [{"action": "view", "label": "Add to cart", "url": product_url}] if in_stock else []
+    headers = {"Authorization": f"Bearer {NTFY_CONFIG["access_token"]}"} if NTFY_CONFIG["access_token"] else None
+    try:
+        response = requests.post(f"{NTFY_CONFIG['url']}",
+            headers=headers,
+            data=json.dumps({
+                "topic": NTFY_CONFIG["topic"],
+                "message": f"💰 Price: {currency}{price}",
+                "Priority": 5 if in_stock else 3,
+                "title": f"{status}: {sku}",
+                "actions": actions
+            })
+        )
+        response.raise_for_status()
+
+    except Exception as e:
+        print(f"[{get_timestamp()}] ❌ Failed to send NTFY notification: {str(e)}")
+
+def open_browser(product_url):
+    """Open web browser to the product url """
     if not running:
         return
-    if NOTIFICATION_CONFIG["open_browser"]:
-        try:
-            webbrowser.open(product_url)
-        except Exception as e:
-            print(f"[{get_timestamp()}] ⚠️ Failed to open browser: {e}")
-    
-    play_notification_sound()
+    try:
+        webbrowser.open(product_url)
+    except Exception as e:
+        print(f"[{get_timestamp()}] ⚠️ Failed to open browser: {e}")
 
 def get_skus_if_needed(selected_cards, force_check=False, telegram_bot=None, loop_manager=None):
     """
@@ -511,19 +541,15 @@ def check_nvidia_stock(skus):
                     if api_sku not in last_stock_status or last_stock_status[api_sku] != is_active or product_url != NVIDIA_BASE_URL:
                         last_stock_status[api_sku] = is_active
                         timestamp = get_timestamp()
-
-                        if is_active:
-                            if NOTIFICATION_CONFIG["log_stock_checks"]:
+                        dispatch_stock_notifications(sku, price, product_url, is_active)
+                        if NOTIFICATION_CONFIG["log_stock_checks"]:
+                            if is_active:
                                 print(f"[{timestamp}] ✅ IN STOCK: {sku} - {currency}{price}")
                                 print(f"[{timestamp}] 🔗 NVIDIA Link: {product_url}")
-                            notify_stock_available(product_url)
-                            # Send Telegram notification
-                            send_stock_notification(sku, price, product_url, True)
-                            time.sleep(params['cooldown'])
-                        else:
-                            if NOTIFICATION_CONFIG["log_stock_checks"]:
+                            else:
                                 print(f"[{timestamp}] ❌ OUT OF STOCK: {sku} - {currency}{price}")
-                            send_stock_notification(sku, price, product_url, False)
+                        if is_active:
+                            time.sleep(params['cooldown'])
                 else:
                     # Empty listMap means product not in system
                     if NOTIFICATION_CONFIG["log_stock_checks"]:
@@ -548,13 +574,19 @@ def run_test(selected_cards):
     
     test_url = NVIDIA_BASE_URL
     print(f"[{get_timestamp()}] Testing stock notification...")
-    notify_stock_available(test_url)
+    open_browser(test_url)
+    play_notification_sound()
     print(f"[{get_timestamp()}] ✅ Test completed. Browser should have opened and sound should have played.")
     
     if TELEGRAM_CONFIG["enabled"] and telegram_bot and telegram_bot.connected:
         print(f"[{get_timestamp()}] Testing Telegram notification...")
-        send_stock_notification("TEST", "9.99", test_url, True)
+        send_telegram_notification("TEST", "9.99", test_url, True)
         print(f"[{get_timestamp()}] Telegram test message sent.")
+
+    if NTFY_CONFIG["enabled"]:
+        print(f"[{get_timestamp()}] Testing NTFY notification...")
+        send_ntfy_notification("TEST", "9.99", test_url, True)
+        print(f"[{get_timestamp()}] NTFY test message sent.")
     
     print(f"[{get_timestamp()}] ⏳ Testing cooldown: waiting {params['cooldown']} seconds...")
     time.sleep(params['cooldown'])

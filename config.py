@@ -59,6 +59,16 @@ TELEGRAM_CONFIG = {
 }
 
 # =================================
+# NTFY Configuration
+# =================================
+NTFY_CONFIG = {
+    "enabled": False,           # Enable stock notifications via NTFY
+    "topic": "XXXXXXX",         # Topic to publish to
+    "access_token": "XXXXXXX",   # Access token (auth)
+    "url": "https://ntfy.sh"    # Change to use a self-hosted NTFY instance
+}
+
+# =================================
 # API Configuration
 # LEAVE THIS SECTION ALONE IF YOU DON'T KNOW WHAT THIS MEANS.
 # =================================
@@ -66,7 +76,7 @@ API_CONFIG = {
     "url": "https://api.store.nvidia.com/partner/v1/feinventory",
     "params": {
         "locale": LOCALE_CONFIG["locale"],
-        "cooldown": 120,       # Seconds to wait after finding stock before resuming checks (60 seconds default)
+        "cooldown": 120,       # Seconds to wait after finding stock before resuming checks (120 seconds default)
         "check_interval": 10   # Seconds between checks (10secs default)
     },
     "headers": {
