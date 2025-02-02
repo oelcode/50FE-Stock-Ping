@@ -17,10 +17,11 @@ The script supports checking of all currently known 50 series Founders Edition, 
 | 🇩🇪 Germany        | de-de  | €        |                                                |
 | 🇮🇹 Italy          | it-it  | €        |                                                |
 | 🇳🇱 Netherlands    | nl-nl  | €        |                                                |
+| 🇳🇴 Norway         | nb-no  | kr       |                                                |
 | 🇪🇸 Spain          | es-es  | €        |                                                |
 | 🇸🇪 Sweden         | sv-se  | kr       |                                                |
 | 🇬🇧 United Kingdom | en-gb  | £        |                                                |
-| 🇺🇸 United States  | en-us  | $        | ⚠️ API endpoint disabled at time of writing.  |
+| 🇺🇸 United States  | en-us  | $        | ⚠️ API endpoint frequently disabled. Check before use.  |
 
 ---
 
