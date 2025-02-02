@@ -64,7 +64,7 @@ TELEGRAM_CONFIG = {
 NTFY_CONFIG = {
     "enabled": False,           # Enable stock notifications via NTFY
     "topic": "XXXXXXX",         # Topic to publish to
-    "access_token": "XXXXXXX",   # Access token (auth)
+    "access_token": "",         # Auth access token (Optional)
     "url": "https://ntfy.sh"    # Change to use a self-hosted NTFY instance
 }
 

@@ -19,17 +19,21 @@ if platform.system() == 'Windows':
     import winsound
 
 # Import configuration
-from config import (
-    PRODUCT_CONFIG_CARDS,
-    STATUS_UPDATES,
-    TELEGRAM_CONFIG,
-    NTFY_CONFIG,
-    NOTIFICATION_CONFIG,
-    API_CONFIG,
-    SKU_CHECK_API_CONFIG,
-    LOCALE_CONFIG,
-    SKU_CHECK_CONFIG
-)
+try:
+    from config import (
+        PRODUCT_CONFIG_CARDS,
+        STATUS_UPDATES,
+        TELEGRAM_CONFIG,
+        NTFY_CONFIG,
+        NOTIFICATION_CONFIG,
+        API_CONFIG,
+        SKU_CHECK_API_CONFIG,
+        LOCALE_CONFIG,
+        SKU_CHECK_CONFIG
+    )
+except ModuleNotFoundError:
+    print("config.py DOES NOT EXIST. Rename example_config.py to config.py to begin.")
+    sys.exit(1)
 
 # Get enabled Cards based on configuration
 AVAILABLE_CARDS = {card: config["enabled"]
