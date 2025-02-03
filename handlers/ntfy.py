@@ -15,6 +15,7 @@ class NtfyNotificationHandler(NotificationHandler):
         "topic": "",  # The notification topic to publish to
         "username": "",  # Optional: Basic auth username
         "password": "",  # Optional: Basic auth password
+        "access_token": "",  # Optional: Access token for authentication (OVERRIDES USERNAME/PASSWORD AUTH)
         "priority": "default"  # Optional: Default priority for notifications
     }
     
@@ -25,6 +26,7 @@ class NtfyNotificationHandler(NotificationHandler):
         self.topic = self.config["topic"]
         self.username = self.config["username"]
         self.password = self.config["password"]
+        self.access_token = self.config["access_token"]
         self.priority = self.config["priority"]
         self.connected = False
         self.session: Optional[aiohttp.ClientSession] = None
@@ -56,23 +58,31 @@ class NtfyNotificationHandler(NotificationHandler):
             return False
             
         try:
-            # Setup basic auth if credentials are provided
+            # Setup authentication
             auth = None
-            if self.username and self.password:
+            headers = {}
+            
+            # Check for access token first (preferred auth method)
+            if self.access_token:
+                headers["Authorization"] = f"Bearer {self.access_token}"
+            # Fall back to basic auth if no token but username/password provided
+            elif self.username and self.password:
                 auth = aiohttp.BasicAuth(self.username, self.password)
             
-            # Create aiohttp session
-            self.session = aiohttp.ClientSession(auth=auth)
+            # Create aiohttp session with appropriate auth
+            self.session = aiohttp.ClientSession(auth=auth, headers=headers)
             
             # Test the connection with a simple ping
-            test_data = {
-                "topic": self.topic,
-                "message": "Initializing connection",
-                "priority": "min",
-                "tags": ["test"]
+            test_headers = {
+                "Priority": "min",
+                "Tags": "test"
             }
             
-            async with self.session.post(f"{self.server_url}/{self.topic}", json=test_data) as response:
+            async with self.session.post(
+                f"{self.server_url}/{self.topic}",
+                data="Initializing connection",
+                headers=test_headers
+            ) as response:
                 if response.status == 200:
                     self.connected = True
                     print(f"[{get_timestamp()}] ✅ ntfy notification handler initialized")
@@ -174,7 +184,28 @@ class NtfyNotificationHandler(NotificationHandler):
             
         try:
             url = f"{self.server_url}/{self.topic}"
-            async with self.session.post(url, json=notification_data) as response:
+            
+            # Extract the core notification data
+            headers = {
+                "Title": notification_data.get("title", ""),
+                "Priority": notification_data.get("priority", self.priority),
+                "Tags": ",".join(notification_data.get("tags", [])),
+            }
+            
+            # Add click URL if present
+            if "click" in notification_data:
+                headers["Click"] = notification_data["click"]
+            
+            # Add actions if present
+            if "actions" in notification_data:
+                headers["Actions"] = json.dumps(notification_data["actions"])
+            
+            # Send the message with headers instead of JSON body
+            async with self.session.post(
+                url,
+                data=notification_data["message"],
+                headers=headers
+            ) as response:
                 if response.status != 200:
                     print(f"[{get_timestamp()}] ❌ Failed to send ntfy notification: Status {response.status}")
                     self.connected = False
