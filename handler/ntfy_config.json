@@ -1,0 +1,8 @@
+{
+    "enabled": false,
+    "server_url": "https://ntfy.sh",
+    "topic": "",
+    "username": "",
+    "password": "",
+    "priority": "default"
+}
