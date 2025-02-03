@@ -32,10 +32,10 @@ def load_locales() -> List[Tuple[str, str, str]]:
         print(f"Error loading locales: {e}")
         return [("United Kingdom", "en-gb", "£")]
 
-def get_locale_choice() -> tuple[str, str]:
+def get_locale_choice() -> tuple[str, str, str]:
     """
     Prompt user for locale choice.
-    Returns tuple of (locale, currency_symbol)
+    Returns tuple of (locale, currency_symbol, country)
     """
     locales = load_locales()
     
@@ -52,26 +52,29 @@ def get_locale_choice() -> tuple[str, str]:
             if choice_num == len(locales) + 1:
                 custom_locale = input("Enter custom locale (e.g., en-us): ").lower()
                 currency = input("Enter currency symbol: ")
-                return custom_locale, currency
+                country = input("Enter country name: ")
+                return custom_locale, currency, country
             elif 1 <= choice_num <= len(locales):
-                _, locale, currency = locales[choice_num - 1]
-                return locale, currency
+                country, locale, currency = locales[choice_num - 1]
+                return locale, currency, country
             else:
                 print(f"Please enter a number between 1 and {len(locales) + 1}")
         except ValueError:
             print("Invalid input. Please try again.")
 
-def update_locale_config(config_content: str, locale: str, currency: str) -> str:
+def update_locale_config(config_content: str, locale: str, currency: str, country: str) -> str:
     """
     Update the LOCALE_CONFIG section in the config file content.
     """
     # Find the LOCALE_CONFIG section
     locale_pattern = r'("locale":\s*")[^"]+(")'
     currency_pattern = r'("currency":\s*")[^"]+(")'
+    country_pattern = r'("country":\s*")[^"]+(")'
     
-    # Update locale and currency
+    # Update locale, currency, and country
     updated_content = re.sub(locale_pattern, f'\\1{locale}\\2', config_content)
     updated_content = re.sub(currency_pattern, f'\\1{currency}\\2', updated_content)
+    updated_content = re.sub(country_pattern, f'\\1{country}\\2', updated_content)
     
     return updated_content
 
@@ -191,7 +194,7 @@ def main():
     args = parser.parse_args()
     
     # Get locale choice from user
-    locale, currency = get_locale_choice()
+    locale, currency, country = get_locale_choice()
     print(f"\nFetching SKUs for locale: {locale}")
     products = get_skus(locale)
     
@@ -225,7 +228,7 @@ def main():
                     updated_content = update_product_config(config_content, products, product_choices)
                     
                     # Update locale config
-                    updated_content = update_locale_config(updated_content, locale, currency)
+                    updated_content = update_locale_config(updated_content, locale, currency, country)
                     
                     # Save updated config
                     save_config(updated_content)
