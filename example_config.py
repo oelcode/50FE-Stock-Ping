@@ -22,12 +22,11 @@ SKU_CHECK_CONFIG = {
 }
 
 # =================================
-# Notification Configuration
+# Core Notification Configuration
 # =================================
 NOTIFICATION_CONFIG = {
     "play_sound": True,    # Whether to play a sound when stock is found
     "open_browser": True,  # Whether to auto open the browser when stock is found (DONT USE WITH TELEGRAM NOTIFICATIONS - SEE README)
-    "log_stock_checks": False  # Whether each stock check is logged in the console (default = False)
 }
 # =================================
 # Script Health Updates Configuration
@@ -45,27 +44,46 @@ STATUS_UPDATES = {
     }
 }
 
-# =================================
-# Telegram Configuration
-# =================================
+CONSOLE_CONFIG = {
+    "enabled": True,
+    "log_stock_checks": False
+}
+
+SOUND_CONFIG = {
+    "enabled": True,
+}
+
 TELEGRAM_CONFIG = {
     "enabled": False,             # Master switch for Telegram functionality (WARNING DONT USE AUTO BROWSER OPEN AT THE SAME TIME - SEE README)
     "bot_token": "XXXXXXX",  # Your bot token
     "chat_id": "XXXXXXX",        # Your chat ID
-    "polling_timeout": 30,        # Seconds to wait in each polling request (Leave at default if you don't know what this means)
-    "polling_retries": 3,         # Number of retries before entering backoff (Leave at default if you don't know what this means)
-    "initial_backoff": 60,        # Initial backoff time in seconds (Leave at default if you don't know what this means)
-    "max_backoff": 3600,          # Maximum backoff time in seconds (1 hour) (Leave at default if you don't know what this means)
+}
+
+DISCORD_CONFIG = {
+    "enabled": False,
+    "webhook_url": "",  # Discord webhook URL
+    "username": "NVIDIA Stock Checker",  # Custom username for webhook messages
+    "avatar_url": ""  # Optional avatar URL for the webhook
 }
 
 # =================================
 # NTFY Configuration
 # =================================
 NTFY_CONFIG = {
-    "enabled": False,           # Enable stock notifications via NTFY
-    "topic": "XXXXXXX",         # Topic to publish to
-    "access_token": "",         # Auth access token (Optional)
-    "url": "https://ntfy.sh"    # Change to use a self-hosted NTFY instance
+    "enabled": True,
+    "server_url": "https://ntfy.sh",  # ntfy server URL
+    "topic": "",  # The notification topic to publish to
+    "username": "",  # Optional: Basic auth username
+    "password": "",  # Optional: Basic auth password
+    "access_token": "",  # Optional: Access token for authentication (OVERRIDES USERNAME/PASSWORD AUTH)
+    "priority": "default"  # Optional: Default priority for notifications
+}
+
+HOMEASSISTANT_CONFIG = {
+    "enabled": False,
+    "ha_url": "http://homeassistant.local:8123",  # Home Assistant URL
+    "ha_token": "",  # Long-lived access token
+    "notification_service": "mobile_app_phone"  # The notification service to use
 }
 
 # =================================

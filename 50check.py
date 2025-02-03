@@ -12,12 +12,12 @@ from typing import Dict, List
 # Import configuration
 try:
     from config import (
+        NOTIFICATION_CONFIG,
         PRODUCT_CONFIG_CARDS,
         API_CONFIG,
         SKU_CHECK_API_CONFIG,
         LOCALE_CONFIG,
         SKU_CHECK_CONFIG,
-        BROWSER_CONFIG
     )
 except ModuleNotFoundError:
     print("config.py DOES NOT EXIST. Rename example_config.py to config.py to begin.")
@@ -136,7 +136,7 @@ async def setup_notifications():
 🎯 Monitoring: {'None' if not AVAILABLE_CARDS else ', '.join(AVAILABLE_CARDS.keys())}
 🌍 Country: {country}
 ⏱️ Check Interval: {params['check_interval']} seconds
-⚡ Browser Auto-Open: {'Enabled' if BROWSER_CONFIG['auto_open'] else 'Disabled'}
+⚡ Browser Auto-Open: {'Enabled' if NOTIFICATION_CONFIG['open_browser'] else 'Disabled'}
 🔄 API SKU Refresh Interval: {SKU_CHECK_CONFIG['interval']} seconds"""
     
     await notification_manager.send_startup_message(startup_message)
@@ -336,7 +336,7 @@ async def main():
         print(f"[{get_timestamp()}] Check Interval: {params['check_interval']} seconds")
         print(f"[{get_timestamp()}] Cooldown Period: {params['cooldown']} seconds")
         print(f"[{get_timestamp()}] SKU Check Interval: {SKU_CHECK_CONFIG['interval']} seconds")
-        print(f"[{get_timestamp()}] Browser Opening: {'Enabled' if BROWSER_CONFIG['auto_open'] else 'Disabled'}")
+        print(f"[{get_timestamp()}] Browser Opening: {'Enabled' if NOTIFICATION_CONFIG['open_browser'] else 'Disabled'}")
         print(f"[{get_timestamp()}] Tip: Run with --test to test notifications")
         print(f"[{get_timestamp()}] Tip: Run with --list-cards to see all available cards")
         

@@ -4,7 +4,7 @@ import importlib
 import inspect
 import os
 from datetime import datetime
-from typing import Dict, List, Type
+from typing import List
 
 def get_timestamp() -> str:
     """Return current timestamp in a readable format"""
