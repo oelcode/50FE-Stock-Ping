@@ -3,14 +3,18 @@ import argparse
 import json
 from typing import Dict, List, Tuple
 import re
+import sys
 
+try:
 # Import configuration from config.py
-from config import (
-    API_CONFIG,
-    SKU_CHECK_API_CONFIG,
-    LOCALE_CONFIG,
-    PRODUCT_CONFIG_CARDS
-)
+    from config import (
+        API_CONFIG,
+        SKU_CHECK_API_CONFIG,
+    )
+except ModuleNotFoundError:
+    print("config.py DOES NOT EXIST. Rename example_config.py to config.py to begin.")
+    sys.exit(1)
+
 
 def load_locales() -> List[Tuple[str, str, str]]:
     """
