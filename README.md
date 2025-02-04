@@ -52,7 +52,7 @@ The script supports checking of all currently known 50 series Founders Edition, 
 1. **Save below files from repo**:
    ```bash
    50check.py
-   config.py
+   example_config.py
    stockconfig.py
    locales.txt
    ```
@@ -64,7 +64,11 @@ The script supports checking of all currently known 50 series Founders Edition, 
    ```
 
 3. **Configure the script**:
-   - Edit `config.py` to your preference. If you want to use the Telegram notifications, ensure you add your Telegram bot token and chat ID.
+   - Copy `example_config.py` to `config.py`:
+   ```bash
+     cp config.example.py config.py
+   ```
+   - Edit `config.py` to your preference. Refer the configuration section as well as documentation in `example_config.py` on configuration options.
 
 ## Installation - METHOD 2
 
@@ -84,7 +88,7 @@ The script supports checking of all currently known 50 series Founders Edition, 
      ```bash
      cp config.example.py config.py
      ```
-   - Edit `config.py` to your preference. If you want to use the Telegram notifications, ensure you add your Telegram bot token and chat ID.
+   - Edit `config.py` to your preference. Refer the configuration section as well as documentation in `example_config.py` on configuration options.
 
 ---
 
@@ -97,6 +101,7 @@ The `config.py` file contains all the configuration options. Here are the key se
 - **`TELEGRAM_CONFIG`**: All Telegram features are turned off by default. Configure your Telegram bot token and chat ID ([Setup guide](https://gist.github.com/nafiesl/4ad622f344cd1dc3bb1ecbe468ff9f8a)).
 - **`API_CONFIG`**: Configure the NVIDIA API URL and parameters. (DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING).
 - **`SKU_CHECK_CONFIG`**: Configure the interval for refreshing SKUs (default: 3600 seconds).
+- **`NTFY_CONFIG`**: Configure notifications via NTFY. Turned off by default. At minimum, set a topic to publish to. Refer to ([NTFY Docs](https://docs.ntfy.sh/)) for more information.
 
 ---
 
@@ -203,6 +208,12 @@ When stock changes are detected, the script sends a Telegram message like this:
 💰 Price: £1,939.00
 🔗 Link: https://www.nvidia.com/en-gb/geforce/graphics-cards/50-series/rtx-5090/
 ```
+
+### NTFY Notifications
+
+When stock changes are detected, the script sends a NTFY message to your topic similar to Telegram. 
+
+> The script only sends stock updates to your NTFY topic, status and startup messages will not be sent.
 
 ### Sound Notifications
 
