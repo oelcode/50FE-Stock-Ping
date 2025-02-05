@@ -1,6 +1,7 @@
 from typing import Optional
 from discord_webhook import DiscordWebhook, DiscordEmbed
 import aiohttp
+from requests import Response
 from . import NotificationHandler, get_timestamp
 
 from config import DISCORD_CONFIG
@@ -15,7 +16,7 @@ class DiscordNotificationHandler(NotificationHandler):
         self.avatar_url = DISCORD_CONFIG["avatar_url"]
         self.connected = False
         self.session: Optional[aiohttp.ClientSession] = None
-        self.webhook: Optional[Webhook] = None
+        self.webhook: Optional[DiscordWebhook] = None
     
     async def initialize(self) -> bool:
         if not self.enabled or not self.webhook_url:
@@ -27,13 +28,8 @@ class DiscordNotificationHandler(NotificationHandler):
             self.webhook = DiscordWebhook(url=self.webhook_url)
             
             # Test the connection by sending a simple message
-            webhook = DiscordWebhook(
-                url=self.webhook_url,
-                content="🔄 NVIDIA Stock Checker initializing...",
-                username=self.username,
-                avatar_url=self.avatar_url
-            )
-            response = webhook.execute()
+            response = self._send_webhook(content="🔄 NVIDIA Stock Checker initializing...")
+            response.raise_for_status()
             
             self.connected = True
             print(f"[{get_timestamp()}] ✅ Discord notification handler initialized")
@@ -66,13 +62,13 @@ class DiscordNotificationHandler(NotificationHandler):
             description=f"{status}: {sku}\n💰 Price: {price}"
         )
         
-        embed.add_field(
-            name="Quick Access",
+        embed.add_embed_field(
+            name="Links",
             value=f"[View Product]({url})",
             inline=False
         )
 
-        await self._send_webhook(embed=embed)
+        self._send_webhook(embed=embed)
     
     async def send_status_update(self, data: dict) -> None:
         if not self.enabled or not self.connected:
@@ -87,7 +83,7 @@ class DiscordNotificationHandler(NotificationHandler):
             minutes_since = data['time_since_check'].seconds // 60
             last_check_str += f" ({minutes_since}m ago)"
 
-        embed = discord.Embed(
+        embed = DiscordEmbed(
             title="NVIDIA Stock Checker Status Update",
             color="0099ff",
             description=f"""⏱️ Running for: {self.format_duration(data['runtime'])}
@@ -96,19 +92,18 @@ class DiscordNotificationHandler(NotificationHandler):
 🎯 Monitoring: {'None' if not data['monitored_cards'] else ', '.join(data['monitored_cards'])}"""
         )
 
-        await self._send_webhook(embed=embed)
+        self._send_webhook(embed=embed)
     
     async def send_startup_message(self, message: str) -> None:
         if not self.enabled or not self.connected:
             return
             
-        embed = discord.Embed(
+        embed = DiscordEmbed(
             title="NVIDIA Stock Checker",
-            color=discord.Color.blue(),
             description=message
         )
         
-        await self._send_webhook(embed=embed)
+        self._send_webhook(embed=embed)
 
     def format_duration(self, duration):
         """Format a duration into a readable string"""
@@ -116,11 +111,8 @@ class DiscordNotificationHandler(NotificationHandler):
         minutes = (duration.seconds % 3600) // 60
         return f"{hours} hours {minutes} minutes"
 
-    async def _send_webhook(self, *, content: str = None, embed: DiscordEmbed = None) -> None:
+    def _send_webhook(self, *, content: str = None, embed: DiscordEmbed = None) -> Response:
         """Helper method to send a message through the webhook"""
-        if not self.webhook_url:
-            return
-            
         try:
             webhook = DiscordWebhook(
                 url=self.webhook_url,
@@ -131,6 +123,8 @@ class DiscordNotificationHandler(NotificationHandler):
             
             if embed:
                 webhook.add_embed(embed)
+
+            return webhook.execute()
         except Exception as e:
             print(f"[{get_timestamp()}] ❌ Failed to send Discord message: {str(e)}")
             self.connected = False
