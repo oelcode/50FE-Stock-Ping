@@ -5,6 +5,7 @@ import inspect
 import os
 from datetime import datetime
 from typing import List
+import traceback
 
 def get_timestamp() -> str:
     """Return current timestamp in a readable format"""
@@ -70,11 +71,15 @@ class NotificationManager:
     
     async def send_stock_alert(self, sku: str, price: str, url: str, in_stock: bool) -> None:
         """Send stock alert to all handlers"""
-        for handler in self.handlers:
-            try:
-                await handler.send_stock_alert(sku, price, url, in_stock)
-            except Exception as e:
-                print(f"[{get_timestamp()}] ❌ Error in {handler.__class__.__name__}: {str(e)}")
+
+        # Send all notifications in parallel
+        results = await asyncio.gather(*[handler.send_stock_alert(sku, price, url, in_stock) for handler in self.handlers], return_exceptions=True)
+        
+        for result in results:
+            if isinstance(result, BaseException):
+                # Print traceback as we don't otherwise know where the exception came from
+                print(f"[{get_timestamp()}] ❌ {result.__class__.__name__} while sending stock alert:")
+                traceback.print_exception(result)
     
     async def send_status_update(self, message: str) -> None:
         """Send status update to all handlers"""
@@ -126,3 +131,4 @@ class NotificationManager:
                     print(f"[{get_timestamp()}] ❌ Failed to load handler {module_name}: {str(e)}")
         
         return manager
+    
