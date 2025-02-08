@@ -34,14 +34,8 @@ NOTIFICATION_CONFIG = {
 # THIS IS NOT THE STOCK NOTIFIER.
 # =================================
 STATUS_UPDATES = {
-    "console": {
-        "enabled": True,              # Enable/disable script health updates in the console
-        "interval": 15 * 60,         # Console script health update interval in seconds (15 minutes default - edit the first number)
-    },
-    "telegram": {
-        "enabled": False,              # Enable/disable script health updates on Telegram
-        "interval": 30 * 60,         # Telegram script health update interval in seconds (30 minutes default - edit the first number)
-    }
+    "enabled": True,  # Enable/disable script health updates
+    "interval": 60 * 60,  # Console script health update interval in seconds (1 hour default - edit the first number)
 }
 
 CONSOLE_CONFIG = {

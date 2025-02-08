@@ -18,6 +18,7 @@ try:
         SKU_CHECK_API_CONFIG,
         LOCALE_CONFIG,
         SKU_CHECK_CONFIG,
+        STATUS_UPDATES,
     )
 except ModuleNotFoundError:
     print("config.py DOES NOT EXIST. Rename example_config.py to config.py to begin.")
@@ -47,9 +48,11 @@ def init_globals():
     global last_stock_status, start_time, successful_requests, failed_requests
     global last_check_time, last_check_success, notification_manager
     global last_sku_check_time, cached_skus, sku_to_name_map, running
+    global last_status_update
     
     last_stock_status = {}
     start_time = datetime.now()
+    last_status_update = start_time
     successful_requests = 0
     failed_requests = 0
     last_check_time = None
@@ -238,7 +241,7 @@ def get_skus_if_needed(selected_cards: List[str], force_check: bool = False) -> 
 
 async def check_nvidia_stock(skus: List[str]):
     """Check stock for each SKU individually"""
-    global last_stock_status, successful_requests, failed_requests, last_check_time, last_check_success
+    global last_stock_status, successful_requests, failed_requests, last_check_time, last_check_success, last_status_update
     
     if not running:
         return
@@ -246,7 +249,8 @@ async def check_nvidia_stock(skus: List[str]):
     current_time = datetime.now()
     
     # Only send status update if we've done at least one check and 15 minutes have passed
-    if last_check_time and (current_time - last_check_time).seconds >= 900:
+    if last_check_time and (current_time - last_status_update).seconds >= STATUS_UPDATES["interval"]:
+        last_status_update = current_time
         await notification_manager.send_status_update(generate_status_data())
     
     for sku in skus:
