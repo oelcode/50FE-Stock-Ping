@@ -68,7 +68,9 @@ class DiscordNotificationHandler(NotificationHandler):
             inline=False
         )
 
-        self._send_webhook(embed=embed)
+        content = DISCORD_CONFIG["mention"] if DISCORD_CONFIG["mention"] and in_stock else None
+
+        self._send_webhook(content=content, embed=embed)
     
     async def send_status_update(self, data: dict) -> None:
         if not self.enabled or not self.connected:

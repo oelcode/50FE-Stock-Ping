@@ -57,7 +57,8 @@ DISCORD_CONFIG = {
     "enabled": False,
     "webhook_url": "",  # Discord webhook URL
     "username": "NVIDIA Stock Checker",  # Custom username for webhook messages
-    "avatar_url": ""  # Optional avatar URL for the webhook
+    "mention": "",  # Optional: Mention a user or a role. Format: <@user_id> or <@&role_id>
+    "avatar_url": ""  # Optional: avatar URL for the webhook
 }
 
 # =================================
