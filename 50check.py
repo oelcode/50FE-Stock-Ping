@@ -259,7 +259,8 @@ async def check_nvidia_stock(skus: List[str]):
             
         try:
             product_name = sku_to_name_map.get(sku, "Unknown Product")
-            print(f"[{get_timestamp()}] ℹ️ Checking stock for {product_name} ({sku})...")
+            if CONSOLE_CONFIG["log_stock_checks"]:
+                print(f"[{get_timestamp()}] ℹ️ Checking stock for {product_name} ({sku})...")
             
             # Record start time of request
             request_start_time = time.time()

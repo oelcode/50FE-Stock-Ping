@@ -7,7 +7,6 @@ class ConsoleNotificationHandler(NotificationHandler):
     
     def __init__(self):
         self.enabled = CONSOLE_CONFIG["enabled"]
-        self.log_stock_checks = CONSOLE_CONFIG["log_stock_checks"]
     
     async def initialize(self) -> bool:
         if not self.enabled:
@@ -26,14 +25,29 @@ class ConsoleNotificationHandler(NotificationHandler):
         status = "✅ IN STOCK" if in_stock else "❌ OUT OF STOCK"
         timestamp = get_timestamp()
         
-        if self.log_stock_checks or in_stock:
-            print(f"[{timestamp}] {status}: {sku} - {price}")
-            if in_stock:
-                print(f"[{timestamp}] 🔗 URL: {url}")
+        print(f"[{timestamp}] {status}: {sku} - {price}")
+        if in_stock:
+            print(f"[{timestamp}] 🔗 URL: {url}")
     
-    async def send_status_update(self, message: str) -> None:
+    async def send_status_update(self, data: dict) -> None:
         if not self.enabled:
             return
+        
+        status_text = "Successful" if data['last_check_success'] else "Failed"
+        
+        last_check_str = "No checks completed"
+        if data['last_check_time']:
+            last_check_str = data['last_check_time'].strftime("%H:%M:%S %d/%m/%Y")
+            minutes_since = data['time_since_check'].seconds // 60
+            last_check_str += f" ({minutes_since}m ago)"
+
+        message = (
+            f"Runtime: {str(data['runtime'])}\n"
+            f"Requests: {data['successful_requests']:,} successful, {data['failed_requests']:,} failed\n"
+            f"Last check: {last_check_str} ({status_text})\n"
+            f"Monitoring: {'None' if not data['monitored_cards'] else ', '.join(data['monitored_cards'])}"
+        )
+
         print(f"\n[{get_timestamp()}] {message}\n")
     
     async def send_startup_message(self, message: str) -> None:
