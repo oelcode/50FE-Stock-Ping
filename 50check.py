@@ -19,6 +19,7 @@ try:
         LOCALE_CONFIG,
         SKU_CHECK_CONFIG,
         STATUS_UPDATES,
+        CONSOLE_CONFIG,
     )
 except ModuleNotFoundError:
     print("config.py DOES NOT EXIST. Rename example_config.py to config.py to begin.")
@@ -144,21 +145,21 @@ async def setup_notifications():
     
     await notification_manager.send_startup_message(startup_message)
 
-def signal_handler(signum, frame):
+async def shutdown(sig: signal.Signals, loop: asyncio.AbstractEventLoop):
     """Handle shutdown signals gracefully"""
     global running
-    print(f"\n[{get_timestamp()}] 🛑 Received shutdown signal, cleaning up...")
+    print(f"\n[{get_timestamp()}] 🛑 Received {sig.name}, cleaning up...")
     running = False
     
     if notification_manager:
-        asyncio.run(notification_manager.shutdown_handlers())
-    
-    print(f"[{get_timestamp()}] Goodbye!")
-    sys.exit(0)
+        await notification_manager.shutdown_handlers()
 
-# Register signal handlers
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
+    if tasks:
+        for task in tasks:
+            task.cancel()
+
+    print(f"[{get_timestamp()}] ✅ Cancelled all tasks")
 
 def get_skus_if_needed(selected_cards: List[str], force_check: bool = False) -> List[str]:
     """
@@ -348,31 +349,32 @@ async def main():
         # Main monitoring loop
         try:
             skus = get_skus_if_needed(selected_cards, force_check=True)
-            while running:
-                try:
-                    # Record start time of check
-                    check_start_time = time.time()
-                    
-                    # Do the check
-                    skus = get_skus_if_needed(selected_cards)
-                    await check_nvidia_stock(skus)
-                    
-                    if running:
-                        # Calculate how long the check took
-                        check_duration = time.time() - check_start_time
-                        
-                        # Calculate remaining time to sleep
-                        sleep_time = max(0, params['check_interval'] - check_duration)
-                        if sleep_time > 0:
-                            time.sleep(sleep_time)
-                except Exception as e:
-                    print(f"[{get_timestamp()}] ❌ Error during monitoring: {str(e)}")
-                    print(traceback.format_exc())
-                    if running:
-                        time.sleep(params['check_interval'])
         except Exception as e:
             print(f"[{get_timestamp()}] ❌ Initial SKU check failed: {str(e)}")
             print(traceback.format_exc())
+
+        while running:
+            try:
+                # Record start time of check
+                check_start_time = time.time()
+                
+                # Do the check
+                skus = get_skus_if_needed(selected_cards)
+                await check_nvidia_stock(skus)
+                
+                if running:
+                    # Calculate how long the check took
+                    check_duration = time.time() - check_start_time
+                    
+                    # Calculate remaining time to sleep
+                    sleep_time = max(0, params['check_interval'] - check_duration)
+                    if sleep_time > 0:
+                        await asyncio.sleep(sleep_time)
+            except Exception as e:
+                print(f"[{get_timestamp()}] ❌ Error during monitoring: {str(e)}")
+                print(traceback.format_exc())
+                if running:
+                    await asyncio.sleep(params['check_interval'])
                         
     except Exception as e:
         print(f"[{get_timestamp()}] ❌ Fatal error: {str(e)}")
@@ -427,5 +429,22 @@ if __name__ == "__main__":
     if args.no_browser:
         NOTIFICATION_CONFIG["open_browser"] = False
     
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    # Register signal handlers
+    signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+    for sig in signals:
+        loop.add_signal_handler(sig.value, lambda s=sig: asyncio.create_task(shutdown(s, loop)))
+
     # Run the main async loop
-    asyncio.run(main())
+    try:
+        loop.run_until_complete(main())
+    except asyncio.CancelledError:
+        # Finish running the remaining tasks
+        pending = asyncio.all_tasks(loop)
+        loop.run_until_complete(asyncio.gather(*pending))
+        pass
+    finally:
+        print(f"[{get_timestamp()}] Successfully shutdown")
+        loop.close()
