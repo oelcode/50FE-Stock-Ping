@@ -1,8 +1,7 @@
 # Core dependencies
 requests>=2.31.0             # For making HTTP requests to NVIDIA API
-python-telegram-bot>=20.3    # For Telegram bot functionality
+aiohttp  # Used across notification modules for API/webhook requests - easier to just install as standard.
 
-# Optional dependencies (platform-specific)
-# winsound (Windows) - Built into Python
-# afplay (macOS) - Built into macOS
-# subprocess - Built into Python
+# Optional dependencies (notification platform specific)
+discord-webhook[discord]  # Needed to use Discord webhook notifications
+python-telegram-bot[telegram]>=20.3  # For Telegram bot functionality
