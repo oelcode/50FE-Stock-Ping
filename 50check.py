@@ -420,7 +420,6 @@ async def check_nvidia_stock(skus: List[str]):
 
             if "listMap" in data and isinstance(data["listMap"], list):
                 if data["listMap"]:  # If we got data back
-                    # FIXED: Check if ANY item in listMap is active (like React's .some() method)
                     is_active = False
                     for item in data["listMap"]:
                         if item.get("is_active", "false") == "true":
