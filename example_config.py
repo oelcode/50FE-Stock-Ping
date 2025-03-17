@@ -1,25 +1,6 @@
-# =================================
-# Product Configuration
-# =================================
-# Set to True/False to enable/disable checking for specific products
-PRODUCT_CONFIG_CARDS = {
-    "NVIDIA RTX 5090": {
-        "enabled": False
-    },
-    "NVIDIA RTX 5080": {
-        "enabled": False
-    }
-}
-
-LOCALE_CONFIG = {
-    "locale": "en-gb",  # Locale to use for the NVIDIA store (en-gb, de-de, etc)
-    "country": "United Kingdom",  # Name of the country corresponding to the locale
-    "currency": "£"    # Currency symbol to use in notifications (£, €, etc)
-}
-
-SKU_CHECK_CONFIG = {
-    "interval": 3600,  # How often to check for the Nvida API for product info changes (in seconds, default is 3600 = 1 hour)
-}
+import json
+import os
+import sys
 
 # =================================
 # Core Notification Configuration
@@ -28,6 +9,11 @@ NOTIFICATION_CONFIG = {
     "play_sound": True,    # Whether to play a sound when stock is found
     "open_browser": True,  # Whether to auto open the browser when stock is found (DONT USE WITH TELEGRAM NOTIFICATIONS - SEE README)
 }
+
+SOUND_CONFIG = {
+    "enabled": True, # Enable/disable sound notifications - MUST BE SAME AS "play_sound" IN NOTIFICATION_CONFIG
+}
+
 # =================================
 # Script Health Updates Configuration
 # This sends a notification to the console and/or Telegram to show you that the script is still running properly.
@@ -42,15 +28,34 @@ CONSOLE_CONFIG = {
     "enabled": True,
     "log_stock_checks": False
 }
+# =================================
+# NOTIFICATION API CONFIGURATION
+# These are the notification services that will be used to send notifications when stock is found.
+# You can enable multiple services at once.
+# =================================
+NTFY_CONFIG = {
+    "enabled": False,
+    "server_url": "https://ntfy.sh",  # ntfy server URL
+    "topic": "XXXXXX",  # The notification topic to publish to
+    "username": "",  # Optional: Basic auth username
+    "password": "",  # Optional: Basic auth password
+    "access_token": "",  # Optional: Access token for authentication (OVERRIDES USERNAME/PASSWORD AUTH)
+    "priority": "high"  # Optional: Default priority for notifications
+}
 
-SOUND_CONFIG = {
-    "enabled": True,
+HOMEASSISTANT_CONFIG = {
+    "enabled": False,
+    "ha_url": "http://homeassistant.local:8123",  # Home Assistant URL
+    "ha_token": "XXXXXXXX",  # Long-lived access token
+    "notification_service": "mobile_app_XXXXXX",  # The notification service to use
+    "critical_alerts_enabled": False,  # Whether to send in-stock alerts as critical
+    "critical_alerts_volume": 1.0  # Volume level for critical alerts (0.0 to 1.0) - default is 1.0
 }
 
 TELEGRAM_CONFIG = {
-    "enabled": False,             # Master switch for Telegram functionality (WARNING DONT USE AUTO BROWSER OPEN AT THE SAME TIME - SEE README)
-    "bot_token": "XXXXXXX",  # Your bot token
-    "chat_id": "XXXXXXX",        # Your chat ID
+    "enabled": False,             # WARNING DONT USE AUTO BROWSER OPEN AT THE SAME TIME - SEE README
+    "bot_token": "XXXXXXXX",  # Your bot token
+    "chat_id": "XXXXXXXX",        # Your chat ID
 }
 
 DISCORD_CONFIG = {
@@ -62,27 +67,33 @@ DISCORD_CONFIG = {
 }
 
 # =================================
-# NTFY Configuration
+# PRODUCT AND LOCALE CONFIG LOADING
+# LEAVE THIS SECTION ALONE IF YOU DON'T KNOW WHAT THIS MEANS.
 # =================================
-NTFY_CONFIG = {
-    "enabled": True,
-    "server_url": "https://ntfy.sh",  # ntfy server URL
-    "topic": "",  # The notification topic to publish to
-    "username": "",  # Optional: Basic auth username
-    "password": "",  # Optional: Basic auth password
-    "access_token": "",  # Optional: Access token for authentication (OVERRIDES USERNAME/PASSWORD AUTH)
-    "priority": "default"  # Optional: Default priority for notifications
-}
+def load_json_config():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(script_dir, 'products.json')
+    
+    try:
+        with open(json_path, 'r') as f:
+            config_data = json.load(f)
+        return config_data
+    except FileNotFoundError:
+        print(f"Error: products.json file not found at {json_path}")
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print(f"Error: products.json contains invalid JSON")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error loading products.json: {e}")
+        sys.exit(1)
 
-HOMEASSISTANT_CONFIG = {
-    "enabled": False,
-    "ha_url": "http://homeassistant.local:8123",  # Home Assistant URL
-    "ha_token": "",  # Long-lived access token
-    "notification_service": "mobile_app_phone"  # The notification service to use
-}
+json_config = load_json_config() # Load configuration from JSON - this will exit if file can't be loaded
+PRODUCT_CONFIG_CARDS = json_config['product_config_cards'] # Get product config from JSON
+LOCALE_CONFIG = json_config['locale_config'] # Get locale info from JSON
 
 # =================================
-# API Configuration
+# NVIDIA API CONFIGURATION
 # LEAVE THIS SECTION ALONE IF YOU DON'T KNOW WHAT THIS MEANS.
 # =================================
 API_CONFIG = {
@@ -102,5 +113,8 @@ API_CONFIG = {
     "base_url": f"https://marketplace.nvidia.com/{LOCALE_CONFIG['locale']}/consumer/graphics-cards/?locale={LOCALE_CONFIG['locale']}&page=1&limit=12&category=GPU&manufacturer=NVIDIA&manufacturer_filter=NVIDIA~2,ASUS~31,GAINWARD~5,GIGABYTE~18,INNO3D~3,KFA2~1,MSI~22,PALIT~10,PNY~7,ZOTAC~14"}
 SKU_CHECK_API_CONFIG = {
     "url": "https://api.nvidia.partners/edge/product/search"
+}
+SKU_CHECK_CONFIG = {
+    "interval": 3600,  # How often to check for the Nvida API for product info changes (in seconds, default is 3600 = 1 hour)
 }
 # LEAVE THIS SECTION ALONE IF YOU DON'T KNOW WHAT THIS MEANS.
