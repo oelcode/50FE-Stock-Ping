@@ -420,6 +420,7 @@ async def check_nvidia_stock(skus: List[str]):
 
             if "listMap" in data and isinstance(data["listMap"], list):
                 if data["listMap"]:  # If we got data back
+                    # FIXED: Check if ANY item in listMap is active (like React's .some() method)
                     is_active = False
                     for item in data["listMap"]:
                         if item.get("is_active", "false") == "true":
@@ -589,8 +590,6 @@ if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    import platform
-
     # Register signal handlers based on the operating system
     def setup_signal_handlers(loop):
         # Check the platform
@@ -604,6 +603,10 @@ if __name__ == "__main__":
         # Add signal handlers
         for sig in signals:
             loop.add_signal_handler(sig.value, lambda s=sig: asyncio.create_task(shutdown(s, loop)))
+    
+    # Call the setup_signal_handlers function to register the handlers
+    setup_signal_handlers(loop)
+    
     # Run the main async loop
     try:
         loop.run_until_complete(main())
