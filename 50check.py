@@ -8,6 +8,7 @@ import signal
 import sys
 import traceback
 import json
+import platform
 import os
 from typing import Dict, List
 
@@ -576,11 +577,21 @@ if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    # Register signal handlers
-    signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
-    for sig in signals:
-        loop.add_signal_handler(sig.value, lambda s=sig: asyncio.create_task(shutdown(s, loop)))
+    import platform
 
+    # Register signal handlers based on the operating system
+    def setup_signal_handlers(loop):
+        # Check the platform
+        if platform.system() == "Windows":
+            # Windows only supports SIGINT and SIGTERM
+            signals = (signal.SIGTERM, signal.SIGINT)
+        else:
+            # Unix/Linux/MacOS supports additional signals
+            signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+        
+        # Add signal handlers
+        for sig in signals:
+            loop.add_signal_handler(sig.value, lambda s=sig: asyncio.create_task(shutdown(s, loop)))
     # Run the main async loop
     try:
         loop.run_until_complete(main())
