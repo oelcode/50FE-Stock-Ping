@@ -213,6 +213,8 @@ When stock changes are detected, the script sends a Telegram message like this:
 
 When stock changes are detected, the script sends a NTFY message to your topic similar to Telegram. 
 
+> The script only sends stock updates to your NTFY topic, status and startup messages will not be sent.
+
 ### Sound Notifications
 
 - On **Windows**: Plays a system alert sound.
