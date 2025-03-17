@@ -20,7 +20,7 @@ SOUND_CONFIG = {
 # THIS IS NOT THE STOCK NOTIFIER.
 # =================================
 STATUS_UPDATES = {
-    "enabled": True,  # Enable/disable script health updates
+    "enabled": False,  # Enable/disable script health updates
     "interval": 60 * 60,  # Console script health update interval in seconds (1 hour default - edit the first number)
 }
 
