@@ -1,0 +1,62 @@
+[
+  {
+    "country": "Austria",
+    "locale": "de-at",
+    "currency": "€"
+  },
+  {
+    "country": "Denmark",
+    "locale": "da-dk",
+    "currency": "kr"
+  },
+  {
+    "country": "Finland",
+    "locale": "fi-fi",
+    "currency": "€"
+  },
+  {
+    "country": "France",
+    "locale": "fr-fr",
+    "currency": "€"
+  },
+  {
+    "country": "Germany",
+    "locale": "de-de",
+    "currency": "€"
+  },
+  {
+    "country": "Italy",
+    "locale": "it-it",
+    "currency": "€"
+  },
+  {
+    "country": "Netherlands",
+    "locale": "nl-nl",
+    "currency": "€"
+  },
+  {
+    "country": "Norway",
+    "locale": "nb-no",
+    "currency": "kr"
+  },
+  {
+    "country": "Spain",
+    "locale": "es-es",
+    "currency": "€"
+  },
+  {
+    "country": "Sweden",
+    "locale": "sv-se",
+    "currency": "kr"
+  },
+  {
+    "country": "United Kingdom",
+    "locale": "en-gb",
+    "currency": "£"
+  },
+  {
+    "country": "United States",
+    "locale": "en-us",
+    "currency": "$"
+  }
+]
