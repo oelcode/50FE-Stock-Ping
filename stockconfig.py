@@ -4,33 +4,39 @@ import json
 from typing import Dict, List, Tuple
 import re
 import sys
+import os
+
+# Default filename for the configuration JSON
+DEFAULT_CONFIG_FILENAME = "products.json"
 
 try:
-# Import configuration from config.py
+    # Import configuration from config.py
     from config import (
         API_CONFIG,
         SKU_CHECK_API_CONFIG,
     )
 except ModuleNotFoundError:
-    print("config.py DOES NOT EXIST. Rename example_config.py to config.py to begin.")
+    print("Error: config.py not found. Rename example_config.py to config.py to begin.")
     sys.exit(1)
 
 
 def load_locales() -> List[Tuple[str, str, str]]:
     """
-    Load locales from locales.txt file.
+    Load locales from locales.json file.
     Returns list of tuples containing (country, locale_code, currency).
     """
     try:
-        with open('locales.txt', 'r', encoding='utf-8') as f:
+        with open('locales.json', 'r', encoding='utf-8') as f:
+            locale_data = json.load(f)
             locales = []
-            for line in f:
-                if line.strip():  # Skip empty lines
-                    country, locale, currency = line.strip().split(',')
-                    locales.append((country, locale, currency))
+            for item in locale_data:
+                country = item["country"]
+                locale = item["locale"]
+                currency = item["currency"]
+                locales.append((country, locale, currency))
             return locales
     except FileNotFoundError:
-        print("Warning: locales.txt not found. Using default locale.")
+        print("Warning: locales.json not found. Using default locale.")
         return [("United Kingdom", "en-gb", "£")]
     except Exception as e:
         print(f"Error loading locales: {e}")
@@ -65,22 +71,6 @@ def get_locale_choice() -> tuple[str, str, str]:
                 print(f"Please enter a number between 1 and {len(locales) + 1}")
         except ValueError:
             print("Invalid input. Please try again.")
-
-def update_locale_config(config_content: str, locale: str, currency: str, country: str) -> str:
-    """
-    Update the LOCALE_CONFIG section in the config file content.
-    """
-    # Find the LOCALE_CONFIG section
-    locale_pattern = r'("locale":\s*")[^"]+(")'
-    currency_pattern = r'("currency":\s*")[^"]+(")'
-    country_pattern = r'("country":\s*")[^"]+(")'
-    
-    # Update locale, currency, and country
-    updated_content = re.sub(locale_pattern, f'\\1{locale}\\2', config_content)
-    updated_content = re.sub(currency_pattern, f'\\1{currency}\\2', updated_content)
-    updated_content = re.sub(country_pattern, f'\\1{country}\\2', updated_content)
-    
-    return updated_content
 
 def get_skus(locale: str) -> List[Dict[str, str]]:
     """
@@ -117,85 +107,78 @@ def get_skus(locale: str) -> List[Dict[str, str]]:
         print(f"Error fetching SKUs: {e}")
         return []
 
-def read_config_file() -> str:
-    """Read the entire config.py file."""
-    with open('config.py', 'r', encoding='utf-8') as f:
-        return f.read()
-
-def update_product_config(config_content: str, products: List[Dict[str, str]], product_choices: Dict[str, bool]) -> str:
-    """
-    Update the PRODUCT_CONFIG_CARDS section in the config file content.
-    Preserves file structure and comments.
-    """
-    # Find the start and end of the PRODUCT_CONFIG_CARDS section
-    start_pattern = r"PRODUCT_CONFIG_CARDS = {"
-    start_match = re.search(start_pattern, config_content)
-    
-    if not start_match:
-        raise ValueError("Could not find PRODUCT_CONFIG_CARDS in config file")
-        
-    start_pos = start_match.start()
-    
-    # Find the matching closing brace
-    opening_count = 1
-    closing_pos = start_pos + len(start_pattern)
-    
-    for i in range(start_pos + len(start_pattern), len(config_content)):
-        if config_content[i] == '{':
-            opening_count += 1
-        elif config_content[i] == '}':
-            opening_count -= 1
-            if opening_count == 0:
-                closing_pos = i + 1
-                break
-    
-    # Create new config string
-    new_config = "PRODUCT_CONFIG_CARDS = {\n"
-    for i, product in enumerate(products):
-        enabled = product_choices.get(product['name'], False)
-        new_config += f'    "{product["name"]}": {{\n'
-        new_config += f'        "enabled": {str(enabled)}\n'
-        new_config += '    }'
-        if i < len(products) - 1:  # Add comma only if not the last item
-            new_config += ','
-        new_config += '\n'
-    new_config += "}"
-    
-    # Replace the old config with the new one
-    updated_content = (
-        config_content[:start_pos] +
-        new_config +
-        config_content[closing_pos:]
-    )
-    
-    return updated_content
-
-def prompt_for_products(products: List[Dict[str, str]]) -> Dict[str, bool]:
+def prompt_for_products(products: List[Dict[str, str]]) -> Dict[str, Dict[str, any]]:
     """
     Prompt user for which products they want to monitor.
-    Returns a dictionary of product names and their enabled status.
+    Returns a dictionary of product configurations.
     """
-    choices = {}
+    product_config = {}
     for product in products:
         while True:
-            response = input(f"\nMonitor {product['name']}? (y/n): ").lower()
+            response = input(f"\nMonitor {product['name']} (SKU: {product['sku']})? (y/n): ").lower()
             if response in ['y', 'n']:
-                choices[product['name']] = (response == 'y')
+                product_config[product['name']] = {
+                    "enabled": (response == 'y'),
+                    "sku": product['sku']
+                }
                 break
             print("Please enter 'y' or 'n'")
-    return choices
+    return product_config
 
-def save_config(content: str):
-    """Save the updated config back to config.py."""
-    with open('config.py', 'w', encoding='utf-8') as f:
-        f.write(content)
+def create_config_json(locale: str, currency: str, country: str, product_config: Dict[str, Dict[str, any]]) -> Dict:
+    """
+    Create a configuration dictionary to be saved as JSON.
+    """
+    config = {
+        "locale_config": {
+            "locale": locale,
+            "currency": currency,
+            "country": country
+        },
+        "product_config_cards": product_config
+    }
+    return config
+
+def save_config_json(config: Dict, filename: str = DEFAULT_CONFIG_FILENAME):
+    """Save the configuration to a JSON file."""
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=4)
+        print(f"\nConfiguration saved to {filename} successfully!")
+    except Exception as e:
+        print(f"\nError saving configuration to {filename}: {e}")
+
+def check_config_exists(filename: str = DEFAULT_CONFIG_FILENAME) -> bool:
+    """Check if the configuration file exists."""
+    return os.path.exists(filename)
 
 def main():
     parser = argparse.ArgumentParser(description='List NVIDIA SKUs for a specific locale')
     parser.add_argument('--json', action='store_true', 
-                       help='Output in JSON format')
+                       help='Output raw SKU list in JSON format')
+    parser.add_argument('--output', type=str, default=DEFAULT_CONFIG_FILENAME,
+                       help=f'Specify the output JSON file (default: {DEFAULT_CONFIG_FILENAME})')
     
     args = parser.parse_args()
+    output_file = args.output
+    
+    # Get the absolute path for more informative messages
+    abs_path = os.path.abspath(output_file)
+    
+    # Check if the configuration file exists
+    if check_config_exists(output_file):
+        print(f"\nConfiguration file '{output_file}' already exists.")
+        while True:
+            response = input("Would you like to update the existing configuration? (y/n): ").lower()
+            if response == 'n':
+                print("Exiting without making changes.")
+                return
+            elif response == 'y':
+                break
+            print("Please enter 'y' or 'n'")
+    else:
+        print(f"\nConfiguration file '{output_file}' does not exist at {abs_path}")
+        print("You will be guided through creating a new configuration file.")
     
     # Get locale choice from user
     locale, currency, country = get_locale_choice()
@@ -203,6 +186,7 @@ def main():
     products = get_skus(locale)
     
     if args.json:
+        # Just output the raw product list if --json is specified
         print(json.dumps(products, indent=2))
     else:
         if products:
@@ -214,32 +198,18 @@ def main():
                 print("-" * 50)
             
             # Prompt for configuration update
-            while True:
-                update_response = input("\nWould you like to update the product configuration? (y/n): ").lower()
-                if update_response in ['y', 'n']:
-                    break
-                print("Please enter 'y' or 'n'")
-            
-            if update_response == 'y':
-                try:
-                    # Get user choices for each product
-                    product_choices = prompt_for_products(products)
-                    
-                    # Update configuration files
-                    config_content = read_config_file()
-                    
-                    # Update product config
-                    updated_content = update_product_config(config_content, products, product_choices)
-                    
-                    # Update locale config
-                    updated_content = update_locale_config(updated_content, locale, currency, country)
-                    
-                    # Save updated config
-                    save_config(updated_content)
-                    print("\nConfiguration updated successfully!")
+            try:
+                # Get user choices for each product
+                product_config = prompt_for_products(products)
                 
-                except Exception as e:
-                    print(f"\nError updating configuration: {e}")
+                # Create configuration dictionary
+                config = create_config_json(locale, currency, country, product_config)
+                
+                # Save configuration to JSON file
+                save_config_json(config, args.output)
+                                
+            except Exception as e:
+                print(f"\nError creating configuration: {e}")
         else:
             print("No products found or error occurred")
 
