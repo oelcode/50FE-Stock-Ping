@@ -420,11 +420,24 @@ async def check_nvidia_stock(skus: List[str]):
 
             if "listMap" in data and isinstance(data["listMap"], list):
                 if data["listMap"]:  # If we got data back
-                    item = data["listMap"][0]  # Should only be one item
-                    api_sku = item.get("fe_sku", "Unknown SKU")
-                    is_active = item.get("is_active", "false") == "true"
-                    price = item.get("price", "Unknown Price")
-                    product_url = item.get("product_url") or NVIDIA_BASE_URL
+                    # FIXED: Check if ANY item in listMap is active (like React's .some() method)
+                    is_active = False
+                    for item in data["listMap"]:
+                        if item.get("is_active", "false") == "true":
+                            is_active = True
+                            break
+                    
+                    # Use the first item for SKU and other notification info
+                    # (or prioritize an active item if one exists)
+                    notification_item = data["listMap"][0]
+                    for item in data["listMap"]:
+                        if item.get("is_active", "false") == "true":
+                            notification_item = item
+                            break
+                    
+                    api_sku = notification_item.get("fe_sku", "Unknown SKU")
+                    price = notification_item.get("price", "Unknown Price")
+                    product_url = notification_item.get("product_url") or NVIDIA_BASE_URL
 
                     # Check if stock status has changed
                     if api_sku not in last_stock_status or last_stock_status[api_sku] != is_active:
