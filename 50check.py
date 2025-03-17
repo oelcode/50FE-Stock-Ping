@@ -167,21 +167,28 @@ async def setup_notifications():
     
     await notification_manager.send_startup_message(startup_message)
 
-async def shutdown(sig: signal.Signals, loop: asyncio.AbstractEventLoop):
+async def shutdown(sig, loop=None):
     """Handle shutdown signals gracefully"""
     global running
+    
+    # Convert signal number to Signal enum for Windows
+    if isinstance(sig, int):
+        sig = signal.Signals(sig)
+        
     print(f"\n[{get_timestamp()}] 🛑 Received {sig.name}, cleaning up...")
     running = False
     
     if notification_manager:
         await notification_manager.shutdown_handlers()
 
-    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
-    if tasks:
-        for task in tasks:
-            task.cancel()
+    # Only cancel tasks if we have a loop reference
+    if loop:
+        tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
+        if tasks:
+            for task in tasks:
+                task.cancel()
 
-    print(f"[{get_timestamp()}] ✅ Cancelled all tasks")
+        print(f"[{get_timestamp()}] ✅ Cancelled all tasks")
 
 async def get_skus_if_needed(selected_cards: List[str], force_check: bool = False) -> List[str]:
     """
