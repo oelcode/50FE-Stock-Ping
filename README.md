@@ -2,7 +2,7 @@
 
 A Python script to monitor 50 Series Founders Edition graphics card stock, allowing you to immediately open a browser window to the product page and/or send notifications through multiple channels when stock changes are detected.
 
-The script supports checking of all currently known 50 series Founders Edition, customizable check intervals (10 secs default), and notifications via sound, browser opening, Telegram messages, NTFY, Home Assistant, and Discord.
+The script supports checking of all currently known 50 series Founders Edition, customizable check intervals (10 secs default), and notifications via sound, auto browser opening, Discord, Home Assistant, NTFY, and Telegram.
 
 ## Supported Locales
 | Country         | Locale  | Currency | Notes |
@@ -26,13 +26,73 @@ The script supports checking of all currently known 50 series Founders Edition, 
 
 - **Multi-Channel Notifications**: Get stock alerts via console, Telegram, NTFY, Home Assistant, and Discord.
 - **Quick Configuration Tool**: Use 'stockconfig.py' to easily set up monitoring for specific cards and locales.
-- **Automatic SKU Detection**: The script detects SKU changes and name changes automatically to maintain monitoring continuity.
-- **Real-time Stock Monitoring**: Continuously checks NVIDIA's API for stock updates.
+- **Automatic SKU Detection**: The script tracks changes on the API, which avoids the script missing stock due to a wrong configuration.
 - **Sound Alerts**: Plays a notification sound when stock is detected (Windows and macOS supported).
 - **Browser Auto Opening**: Automatically opens the product page in your browser when stock is detected (see ⚠️IMPORTANT BROWSER AUTO OPEN NOTICE⚠️ below).
-- **Status Updates**: Provides periodic status updates via configured notification channels.
-- **Telegram Command Support**: Use the `/status` command in Telegram to get the current status of the stock checker.
+- **Periodic Status Updates**: Provides periodic status updates via configured notification channels.
+- **Ad-hoc Status Updates (TELEGRAM ONLY)**: Use the `/status` command in Telegram to get the current status of the stock checker.
 - **Advanced Error Handling**: Robust error recovery and graceful shutdown capabilities.
+- **Critical Mobile Alerts (HOME ASSISTANT ONLY)**: Leverage Home Assistant's power notification support on iOS/Android, to ensure that you never miss a stock alert.
+
+---
+
+## Automatic Product Information Updates
+
+The script periodically checks NVIDIA's API to ensure that it's tracking the correct products. It can detect both:
+- **Name Changes**: When a product's display name changes but the SKU remains the same.
+- **SKU Changes**: When a product's SKU changes but the display name remains the same.
+
+When changes are detected, the script automatically updates its internal tracking and notifies you about these changes.
+
+---
+
+## Notification Support
+
+### Telegram Notifications
+
+When stock changes are detected, the script sends a Telegram message like this:
+
+```
+🔔 NVIDIA Stock Alert
+✅ IN STOCK: GeForce RTX 5090
+💰 Price: £1,939.00
+🔗 Link: https://www.nvidia.com/en-gb/geforce/graphics-cards/50-series/rtx-5090/
+```
+
+Telegram Commands:
+- **`/status`**: Get the current status of the stock checker, including uptime, # of API requests, and the cards being monitored.
+- Follow this guide (https://docs.tracardi.com/qa/how_can_i_get_telegram_bot/) to get your bot setup. Add the token and chat ID's into config.py.
+
+### NTFY Notifications
+
+When stock changes are detected, the script sends a NTFY message to your configured topic with similar information to the Telegram message.
+
+### Home Assistant Notifications
+
+The script can send notifications to your Home Assistant instance, including critical alerts that can override Do Not Disturb settings on your device. 
+
+Critical alerts can be configured in the `HOMEASSISTANT_CONFIG` section of your `config.py` file. Be advised, THIS WILL DISREGARD 'DO NOT DISTURB' SETTINGS ON YOUR DEVICE.
+```python
+    "critical_alerts_enabled": True,  # Set to True to enable critical alerts
+    "critical_alerts_volume": 1.0     # Volume level for critical alerts (0.0 to 1.0)
+```
+Note - Critical Alerts will only work for "IN STOCK" alerts. Run the script with the `--test` arg to ensure this is setup properly.
+
+### Discord Notifications
+
+Stock alerts and status updates can be sent to a Discord channel via webhooks.
+
+### Sound Notifications
+
+- On **Windows**: Plays a system alert sound.
+- On **macOS**: Plays the "Ping" sound.
+- On **Linux**: Sound notifications are not supported.
+
+### Browser Automation
+
+If enabled, the script will automatically open the product page in your default browser when stock is detected. 
+
+⚠️ Please refer to the "IMPORTANT BROWSER AUTO OPEN NOTICE" section above before using this feature, especially if you're also using remote notification services.
 
 ---
 
@@ -48,41 +108,32 @@ The script supports checking of all currently known 50 series Founders Edition, 
 
 ## Installation - METHOD 1
 
-1. **Save below files from repo**:
+1. **Download ZIP from repo**:
    ```bash
-   50check.py
-   example_config.py
-   stockconfig.py
-   handlers.py
-   locales.json
+   https://github.com/oelcode/50FE-Stock-Ping/archive/refs/heads/main.zip
    ```
 
 2. **Install dependencies**:
    ```bash
    pip install requests aiohttp
-   
-   # For specific notification methods (install as needed):
    pip install python-telegram-bot  # For Telegram notifications
    pip install discord-webhook  # For Discord notifications
    ```
 
 3. **Configure the script**:
-   - Copy `example_config.py` to `config.py`:
-   ```bash
-     cp example_config.py config.py
-   ```
-   - Run the configuration tool to set up your preferences:
+   - Rename `example_config.py` to `config.py`:
+   - Run the configuration tool to set up your product monitoring preferences:
    ```bash
      python stockconfig.py
    ```
-   - Edit `config.py` to configure notification methods and other settings.
+   - Edit `config.py` to configure notification methods and other settings (each option has an explanation in the file).
 
 ## Installation - METHOD 2
 
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/oelcode/50FE-Stock-Ping.git
-   cd nvidia-stock-checker
+   cd 50FE-Stock-Ping
    ```
 
 2. **Install dependencies**:
@@ -95,15 +146,15 @@ The script supports checking of all currently known 50 series Founders Edition, 
      ```bash
      cp example_config.py config.py
      ```
-   - Run the configuration tool:
+   - Run the configuration tool to set up your product monitoring preferences:
      ```bash
      python stockconfig.py
      ```
-   - Edit `config.py` to configure notification methods and other settings.
+   - Edit `config.py` to configure notification methods and other settings (each option has an explanation in the file).
 
 ---
 
-## Configuration
+<!--## Configuration
 
 ### Primary Configuration Files
 
@@ -126,7 +177,7 @@ The script supports checking of all currently known 50 series Founders Edition, 
 - **`SKU_CHECK_CONFIG`**: Controls how often the script validates product information against the NVIDIA API (default: 1 hour).
 - **`API_CONFIG`**: Contains API endpoints, default parameters, and headers (modify only if you know what you're doing).
 
----
+--- -->
 
 ##  ⚠️IMPORTANT BROWSER AUTO OPEN NOTICE⚠️
 
@@ -150,13 +201,13 @@ If you have the browser auto-open enabled, it's strongly recommended to run the 
 
 ### Running the Script
 
-Before you start monitoring for stock, you need to run the configuration tool to set up your locale and product preferences:
+<!-- Before you start monitoring for stock, you need to run the configuration tool to set up your locale and product preferences:
 
 ```bash
 python stockconfig.py
 ```
 
-Then run the stock checker:
+Then run the stock checker: -->
 
 ```bash
 python 50check.py
@@ -171,7 +222,7 @@ python 50check.py
 | `--cooldown`           | Cooldown period in seconds after finding stock (default: from config).               |
 | `--check-interval`     | Time between checks in seconds (default: from config).                               |
 | `--sku-check-interval` | Time between API product validation checks in seconds (default: 3600).                         |
-| `--no-browser`         | Disable automatic browser opening.                                          |
+| `--no-browser`         | Disable automatic browser opening (Overrides any config setting).                              |
 
 ### Example Commands
 
@@ -189,60 +240,6 @@ python 50check.py
    ```bash
    python 50check.py --check-interval 30 --cooldown 5
    ```
-
----
-
-## Notification Support
-
-### Telegram Notifications
-
-When stock changes are detected, the script sends a Telegram message like this:
-
-```
-🔔 NVIDIA Stock Alert
-✅ IN STOCK: GeForce RTX 5090
-💰 Price: £1,939.00
-🔗 Link: https://www.nvidia.com/en-gb/geforce/graphics-cards/50-series/rtx-5090/
-```
-
-Telegram Commands:
-- **`/status`**: Get the current status of the stock checker, including uptime, # of API requests, and the cards being monitored.
-
-### NTFY Notifications
-
-When stock changes are detected, the script sends a NTFY message to your configured topic with similar information to the Telegram message.
-
-### Home Assistant Notifications
-
-The script can send notifications to your Home Assistant instance, including critical alerts that can override Do Not Disturb settings on your device. 
-
-Critical alerts can be configured in the `HOMEASSISTANT_CONFIG` section of your `config.py` file:
-```python
-HOMEASSISTANT_CONFIG = {
-    "enabled": True,
-    "ha_url": "http://your-home-assistant-url:8123",
-    "ha_token": "your-long-lived-access-token",
-    "notification_service": "mobile_app_your_device_name",
-    "critical_alerts_enabled": True,  # Set to True to enable critical alerts
-    "critical_alerts_volume": 1.0     # Volume level for critical alerts (0.0 to 1.0)
-}
-```
-
-### Discord Notifications
-
-Stock alerts and status updates can be sent to a Discord channel via webhooks.
-
-### Sound Notifications
-
-- On **Windows**: Plays a system alert sound.
-- On **macOS**: Plays the "Ping" sound.
-- On **Linux**: Sound notifications are not supported.
-
-### Browser Automation
-
-If enabled, the script will automatically open the product page in your default browser when stock is detected. 
-
-⚠️ Please refer to the "IMPORTANT BROWSER AUTO OPEN NOTICE" section above before using this feature, especially if you're also using remote notification services.
 
 ---
 
@@ -265,26 +262,6 @@ If enabled, the script will automatically open the product page in your default 
 [2025-03-17 14:35:47] ℹ️ Checking stock for GeForce RTX 5090
 [2025-03-17 14:35:47] ✅ IN STOCK: GeForce RTX 5090 - $1,999.00
 ```
-
----
-
-## Advanced Features
-
-### Automatic Product Information Updates
-
-The script periodically checks NVIDIA's API to ensure that it's tracking the correct products. It can detect both:
-- **Name Changes**: When a product's display name changes but the SKU remains the same.
-- **SKU Changes**: When a product's SKU changes but the display name remains the same.
-
-When changes are detected, the script automatically updates its internal tracking and notifies you about these changes.
-
-### Graceful Error Handling
-
-The script includes robust error handling to recover from temporary API issues, network problems, and unexpected responses. It will continue attempting to monitor stock even after encountering errors.
-
-### Graceful Shutdown
-
-The script can be safely terminated using Ctrl+C or by sending standard termination signals. It will properly close all notification channels before exiting.
 
 ---
 
