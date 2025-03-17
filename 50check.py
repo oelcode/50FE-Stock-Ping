@@ -7,16 +7,38 @@ from datetime import datetime
 import signal
 import sys
 import traceback
+import json
+import os
 from typing import Dict, List
 
-# Import configuration
+# Load product configuration from products.json
+def load_product_config():
+    try:
+        with open('products.json', 'r') as f:
+            config_data = json.load(f)
+        return config_data
+    except FileNotFoundError:
+        print("products.json DOES NOT EXIST. Please run stockconfig.py.")
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print("products.json contains invalid JSON. Please delete the file and re-run stockconfig.py.")
+        sys.exit(1)
+
+# Load JSON configuration
+product_json_config = load_product_config()
+
+# Get locale configuration from JSON
+LOCALE_CONFIG = product_json_config["locale_config"]
+
+# Get product configuration from JSON
+PRODUCT_CONFIG_CARDS = product_json_config["product_config_cards"]
+
+# Import remaining configuration from config.py
 try:
     from config import (
         NOTIFICATION_CONFIG,
-        PRODUCT_CONFIG_CARDS,
         API_CONFIG,
         SKU_CHECK_API_CONFIG,
-        LOCALE_CONFIG,
         SKU_CHECK_CONFIG,
         STATUS_UPDATES,
         CONSOLE_CONFIG,
@@ -24,7 +46,6 @@ try:
 except ModuleNotFoundError:
     print("config.py DOES NOT EXIST. Rename example_config.py to config.py to begin.")
     sys.exit(1)
-
 
 # Import notification system
 from handlers import NotificationManager
@@ -138,7 +159,7 @@ async def setup_notifications():
     # Send startup message
     startup_message = f"""🚀 NVIDIA Stock Checker Started Successfully!
 🎯 Monitoring: {'None' if not AVAILABLE_CARDS else ', '.join(AVAILABLE_CARDS.keys())}
-🌍 Country: {country}
+🌍 Country: {country} ({currency})
 ⏱️ Check Interval: {params['check_interval']} seconds
 ⚡ Browser Auto-Open: {'Enabled' if NOTIFICATION_CONFIG['open_browser'] else 'Disabled'}
 🔄 API SKU Refresh Interval: {SKU_CHECK_CONFIG['interval']} seconds"""
@@ -161,11 +182,13 @@ async def shutdown(sig: signal.Signals, loop: asyncio.AbstractEventLoop):
 
     print(f"[{get_timestamp()}] ✅ Cancelled all tasks")
 
-def get_skus_if_needed(selected_cards: List[str], force_check: bool = False) -> List[str]:
+async def get_skus_if_needed(selected_cards: List[str], force_check: bool = False) -> List[str]:
     """
-    Get SKUs based on selected cards, but only if the cache has expired or force_check is True.
+    Get SKUs based on selected cards and validate them against the API.
+    Enhanced to detect both name changes (same SKU) and SKU changes (same name).
+    Returns a list of valid SKUs.
     """
-    global last_sku_check_time, cached_skus, sku_to_name_map
+    global last_sku_check_time, cached_skus, sku_to_name_map, running
     
     current_time = datetime.now()
     
@@ -182,8 +205,17 @@ def get_skus_if_needed(selected_cards: List[str], force_check: bool = False) -> 
                 print(f"[{get_timestamp()}] 🚀 Performing initial SKU check...")
             else:
                 print(f"[{get_timestamp()}] ℹ️ Updating SKU cache...")
-                
-            # Get SKUs and their associated product names
+            
+            # Get configured SKUs and names from products.json
+            configured_skus = {}
+            configured_names_to_skus = {}
+            for card, config in PRODUCT_CONFIG_CARDS.items():
+                if config["enabled"] and card in selected_cards and "sku" in config:
+                    sku = config["sku"]
+                    configured_skus[sku] = card
+                    configured_names_to_skus[card] = sku
+            
+            # Always fetch products from API for validation
             sku_check_params = {
                 "locale": API_CONFIG["params"]["locale"],
                 "page": 1,
@@ -194,37 +226,144 @@ def get_skus_if_needed(selected_cards: List[str], force_check: bool = False) -> 
             response.raise_for_status()
             data = response.json()
             
-            # First, collect all products from API
-            all_products = {}
+            # Collect all products from API
+            api_products = {}  # SKU -> Name mapping
+            api_names_to_skus = {}  # Name -> SKU mapping (for detecting SKU changes)
+            
             if "searchedProducts" in data and isinstance(data["searchedProducts"]["productDetails"], list):
                 for product in data["searchedProducts"]["productDetails"]:
                     if "productSKU" in product and "displayName" in product:
                         sku = product["productSKU"]
                         name = product["displayName"]
-                        all_products[sku] = name
-                        sku_to_name_map[sku] = name
-
+                        api_products[sku] = name
+                        api_names_to_skus[name] = sku
+            
             # Log all products found from API
-            all_products_details = ", ".join([f"{name} ({sku})" for sku, name in all_products.items()])
+            all_products_details = ", ".join([f"{name} ({sku})" for sku, name in api_products.items()])
             print(f"[{get_timestamp()}] 📋 Current SKU's listed on API: {all_products_details}")
+            
+            # Validate configured SKUs against API
+            missing_skus = {}
+            valid_skus = []
+            name_changes = []
+            sku_changes = []
+            
+            # SCENARIO 1: Check for products with the same SKU but different names
+            for sku, local_name in configured_skus.items():
+                if sku in api_products:
+                    # SKU exists in API
+                    valid_skus.append(sku)
+                    api_name = api_products[sku]
+                    
+                    # Update SKU to name mapping
+                    sku_to_name_map[sku] = api_name
+                    
+                    # Check if product name has changed
+                    if local_name != api_name:
+                        name_changes.append((local_name, api_name, sku))
+                else:
+                    # SKU doesn't exist in API
+                    missing_skus[sku] = local_name
+            
+            # SCENARIO 2: Check for products with the exact same name but different SKUs
+            for local_name, original_sku in configured_names_to_skus.items():
+                # Only check products that weren't found by SKU
+                if original_sku in valid_skus:
+                    continue
+                    
+                # Check if the exact name exists in the API
+                if local_name in api_names_to_skus:
+                    # Found exact name match with different SKU
+                    new_sku = api_names_to_skus[local_name]
+                    valid_skus.append(new_sku)
+                    sku_to_name_map[new_sku] = local_name
+                    sku_changes.append((original_sku, new_sku, local_name))
+                    
+                    # Remove this SKU from missing SKUs since we found a replacement
+                    if original_sku in missing_skus:
+                        del missing_skus[original_sku]
+            
+            # Send notifications for any updates made
+            update_notifications = []
+            
+            # Log any name changes
+            if name_changes:
+                for old_name, new_name, sku in name_changes:
+                    change_message = f"Product name changed: '{old_name}' → '{new_name}' (SKU: {sku})"
+                    print(f"[{get_timestamp()}] ℹ️ {change_message}")
+                    update_notifications.append(change_message)
+            
+            # Log any SKU changes
+            if sku_changes:
+                for old_sku, new_sku, product_name in sku_changes:
+                    change_message = f"Product SKU changed: '{old_sku}' → '{new_sku}' (Product: {product_name})"
+                    print(f"[{get_timestamp()}] ℹ️ {change_message}")
+                    update_notifications.append(change_message)
+            
+            # Send notification if any updates were made
+            if update_notifications and notification_manager:
+                config_message = """
+🔄 Product Configuration Auto-Updated!
 
-            # Check for mismatches between API products and configured products
-            if not handle_product_mismatch(all_products, selected_cards):
-                print(f"[{get_timestamp()}] 🛑 Exiting due to product mismatch")
-                global running
-                running = False
-                sys.exit(1)
+The script detected changes in NVIDIA's product information and has automatically updated its tracking.
+Please review your configuration file (products.json) at your earliest convenience to ensure it reflects your desired tracking.
 
-            # Then filter for enabled products
-            enabled_skus = []
-            for sku, name in all_products.items():
-                matching_card = next((card for card in PRODUCT_CONFIG_CARDS.keys() 
-                                   if card.lower() in name.lower() 
-                                   and PRODUCT_CONFIG_CARDS[card]["enabled"]), None)
-                if matching_card and matching_card in selected_cards:
-                    enabled_skus.append(sku)
-
-            cached_skus = enabled_skus
+Changes detected:
+"""
+                for update in update_notifications:
+                    config_message += f"- {update}\n"
+                
+                config_message += "\nThese changes are currently only applied to the script's internal tracking and have NOT been written to your configuration file."
+                
+                # Send the notification
+                await notification_manager.send_startup_message(config_message)            
+            # Handle missing SKUs
+            # Handle missing SKUs
+            if missing_skus:
+                # Format message
+                missing_products_list = ", ".join([f"{name} ({sku})" for sku, name in missing_skus.items()])
+                
+                # Create notification message
+                mismatch_message = "⚠️ CRITICAL: Product Mismatch Detected!\n\n"
+                
+                # List products that couldn't be found
+                mismatch_message += f"The following configured products could not be found in the NVIDIA API:\n"
+                for sku, name in missing_skus.items():
+                    mismatch_message += f"- {name} ({sku})\n"
+                
+                # List products that will continue to be monitored (if any)
+                if valid_skus:
+                    mismatch_message += f"\nThe following products will continue to be monitored:\n"
+                    for sku in valid_skus:
+                        product_name = sku_to_name_map.get(sku, f"Unknown Product ({sku})")
+                        mismatch_message += f"- {product_name} ({sku})\n"
+                
+                # Provide next steps
+                mismatch_message += "\n📋 NEXT STEPS:\n"
+                mismatch_message += "1. Update your products.json file to match current NVIDIA product offerings\n"
+                mismatch_message += "2. Run stockconfig.py to reconfigure your products\n"
+                mismatch_message += "3. Restart the script\n"
+                
+                # Indicate if script will exit
+                if not valid_skus:
+                    mismatch_message += "\n🛑 No valid products remain to monitor. The script will now exit."
+                
+                # Send notification
+                if notification_manager:
+                    await notification_manager.send_startup_message(mismatch_message)
+                
+                # Print to console as well
+                timestamp = get_timestamp()
+                print(f"\n[{timestamp}] {mismatch_message}")
+                
+                # Exit if no valid SKUs
+                if not valid_skus:
+                    print(f"[{get_timestamp()}] 🛑 Exiting as there are no valid products to monitor.")
+                    running = False
+                    sys.exit(1)
+            
+            # Update cache with valid SKUs
+            cached_skus = valid_skus
             last_sku_check_time = current_time
             
             if force_check:
@@ -259,9 +398,11 @@ async def check_nvidia_stock(skus: List[str]):
             return
             
         try:
-            product_name = sku_to_name_map.get(sku, "Unknown Product")
+            # Get the product name from our mapping, or use a fallback if not found
+            product_name = sku_to_name_map.get(sku, f"Unknown Product ({sku})")
+            
             if CONSOLE_CONFIG["log_stock_checks"]:
-                print(f"[{get_timestamp()}] ℹ️ Checking stock for {product_name} ({sku})...")
+                print(f"[{get_timestamp()}] ℹ️ Checking stock for {product_name}")
             
             # Record start time of request
             request_start_time = time.time()
@@ -288,8 +429,8 @@ async def check_nvidia_stock(skus: List[str]):
                     if api_sku not in last_stock_status or last_stock_status[api_sku] != is_active:
                         last_stock_status[api_sku] = is_active
 
-                        # Send notification
-                        await notification_manager.send_stock_alert(sku, price, product_url, is_active)
+                        # Send notification using product name instead of SKU
+                        await notification_manager.send_stock_alert(product_name, price, product_url, is_active)
 
                         # Open browser if configured and item is in stock
                         if is_active and NOTIFICATION_CONFIG["open_browser"]:
@@ -301,7 +442,7 @@ async def check_nvidia_stock(skus: List[str]):
                         if is_active:
                             time.sleep(params['cooldown'])
                 else:
-                    print(f"[{get_timestamp()}] ℹ️ ({sku}) is not currently in the system")
+                    print(f"[{get_timestamp()}] ℹ️ Product {product_name} is not currently in the system")
             
             # Small delay between requests, accounting for request time
             if running:
@@ -320,7 +461,7 @@ async def main():
     try:
         # Check if no cards are being monitored
         if not AVAILABLE_CARDS:
-            print("NO CARDS HAVE BEEN SETUP FOR MONITORING. RUN 'stockconfig.py' TO SET THE CARDS YOU WANT TO MONITOR")
+            print("NO CARDS HAVE BEEN SETUP FOR MONITORING. CHECK YOUR products.json FILE.")
             sys.exit(1)
 
         # Initialize notification system
@@ -337,7 +478,8 @@ async def main():
 
         # Print startup information
         print(f"[{get_timestamp()}] Stock checker started. Monitoring for changes...")
-        print(f"[{get_timestamp()}] Monitored Country: {country}")
+        print(f"[{get_timestamp()}] Product config succesfully loaded from products.json")
+        print(f"[{get_timestamp()}] Monitored Country: {country} ({currency})")
         print(f"[{get_timestamp()}] Monitoring Cards: {'None' if not selected_cards else ', '.join(selected_cards)}")
         print(f"[{get_timestamp()}] Check Interval: {params['check_interval']} seconds")
         print(f"[{get_timestamp()}] Cooldown Period: {params['cooldown']} seconds")
@@ -348,7 +490,8 @@ async def main():
         
         # Main monitoring loop
         try:
-            skus = get_skus_if_needed(selected_cards, force_check=True)
+            # Add 'await' to properly handle the async function
+            skus = await get_skus_if_needed(selected_cards, force_check=True)
         except Exception as e:
             print(f"[{get_timestamp()}] ❌ Initial SKU check failed: {str(e)}")
             print(traceback.format_exc())
@@ -358,8 +501,8 @@ async def main():
                 # Record start time of check
                 check_start_time = time.time()
                 
-                # Do the check
-                skus = get_skus_if_needed(selected_cards)
+                # Add 'await' to properly handle the async function
+                skus = await get_skus_if_needed(selected_cards)
                 await check_nvidia_stock(skus)
                 
                 if running:
@@ -386,10 +529,11 @@ async def main():
 
 def list_available_cards():
     """Print all available cards and their descriptions"""
-    print("\nProduct Configuration:")
+    print("\nProduct Configuration (from products.json):")
     for card, config in PRODUCT_CONFIG_CARDS.items():
         status = "✅ Enabled" if config["enabled"] else "❌ Disabled"
-        print(f"  {card} - {status}")
+        sku = config.get("sku", "No SKU")
+        print(f"  {card} - {status} (SKU: {sku})")
     print("\nCurrently monitoring:")
     for card in AVAILABLE_CARDS.keys():
         print(f"  {card}")
