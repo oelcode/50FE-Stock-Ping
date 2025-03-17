@@ -20,7 +20,7 @@ class DiscordNotificationHandler(NotificationHandler):
     
     async def initialize(self) -> bool:
         if not self.enabled or not self.webhook_url:
-            print(f"[{get_timestamp()}] ℹ️ Discord notifications disabled or missing webhook URL")
+            print(f"[{get_timestamp()}] ℹ️\u200B Discord notifications disabled or missing webhook URL")
             return False
             
         try:
@@ -48,7 +48,7 @@ class DiscordNotificationHandler(NotificationHandler):
             except Exception as e:
                 print(f"[{get_timestamp()}] ⚠️ Error during Discord shutdown: {str(e)}")
     
-    async def send_stock_alert(self, sku: str, price: str, url: str, in_stock: bool) -> None:
+    async def send_stock_alert(self, product_name: str, price: str, url: str, in_stock: bool) -> None:
         if not self.enabled or not self.connected:
             return
             
@@ -59,7 +59,7 @@ class DiscordNotificationHandler(NotificationHandler):
             title="NVIDIA Stock Alert",
             url=url,
             color=color,
-            description=f"{status}: {sku}\n💰 Price: {price}"
+            description=f"{status}: {product_name}\n💰 Price: {price}"
         )
         
         embed.add_embed_field(

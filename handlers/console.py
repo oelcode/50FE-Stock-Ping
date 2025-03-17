@@ -18,14 +18,14 @@ class ConsoleNotificationHandler(NotificationHandler):
     async def shutdown(self) -> None:
         pass
     
-    async def send_stock_alert(self, sku: str, price: str, url: str, in_stock: bool) -> None:
+    async def send_stock_alert(self, product_name: str, price: str, url: str, in_stock: bool) -> None:
         if not self.enabled:
             return
             
         status = "✅ IN STOCK" if in_stock else "❌ OUT OF STOCK"
         timestamp = get_timestamp()
         
-        print(f"[{timestamp}] {status}: {sku} - {price}")
+        print(f"[{timestamp}] {status}: {product_name} - {price}")
         if in_stock:
             print(f"[{timestamp}] 🔗 URL: {url}")
     

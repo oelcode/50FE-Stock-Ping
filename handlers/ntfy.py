@@ -21,7 +21,7 @@ class NtfyNotificationHandler(NotificationHandler):
     
     async def initialize(self) -> bool:
         if not self.enabled or not self.topic:
-            print(f"[{get_timestamp()}] ℹ️ ntfy notifications disabled or missing topic")
+            print(f"[{get_timestamp()}] ℹ️\u200B ntfy notifications disabled or missing topic")
             return False
             
         try:
@@ -71,7 +71,7 @@ class NtfyNotificationHandler(NotificationHandler):
             except Exception as e:
                 print(f"[{get_timestamp()}] ⚠️ Error during ntfy shutdown: {str(e)}")
     
-    async def send_stock_alert(self, sku: str, price: str, url: str, in_stock: bool) -> None:
+    async def send_stock_alert(self, product_name: str, price: str, url: str, in_stock: bool) -> None:
         if not self.enabled or not self.connected:
             return
             
@@ -80,7 +80,7 @@ class NtfyNotificationHandler(NotificationHandler):
         notification_data = {
             "topic": self.topic,
             "title": "NVIDIA Stock Alert",
-            "message": f"{status}: {sku}\nPrice: {price}",
+            "message": f"{status}: {product_name}\nPrice: {price}",
             "priority": "high" if in_stock else "default",
             "tags": ["nvidia", "stock", "alert"] + (["instock"] if in_stock else ["outofstock"]),
             "click": url,  # URL to open when notification is clicked

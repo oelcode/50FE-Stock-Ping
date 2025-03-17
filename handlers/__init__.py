@@ -4,7 +4,7 @@ import importlib
 import inspect
 import os
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Any
 import traceback
 
 def get_timestamp() -> str:
@@ -25,13 +25,26 @@ class NotificationHandler(ABC):
         pass
     
     @abstractmethod
-    async def send_stock_alert(self, sku: str, price: str, url: str, in_stock: bool) -> None:
-        """Send a stock status notification"""
+    async def send_stock_alert(self, product_name: str, price: str, url: str, in_stock: bool) -> None:
+        """
+        Send a stock status notification
+        
+        Args:
+            product_name: The human-readable product name
+            price: The price of the product
+            url: URL to the product page
+            in_stock: Whether the product is in stock
+        """
         pass
     
     @abstractmethod
-    async def send_status_update(self, message: str) -> None:
-        """Send a status update message"""
+    async def send_status_update(self, data: Dict[str, Any]) -> None:
+        """
+        Send a status update
+        
+        Args:
+            data: Dictionary with status data
+        """
         pass
     
     @abstractmethod
@@ -69,11 +82,11 @@ class NotificationManager:
             except Exception as e:
                 print(f"[{get_timestamp()}] ❌ Error shutting down {handler.__class__.__name__}: {str(e)}")
     
-    async def send_stock_alert(self, sku: str, price: str, url: str, in_stock: bool) -> None:
+    async def send_stock_alert(self, product_name: str, price: str, url: str, in_stock: bool) -> None:
         """Send stock alert to all handlers"""
 
         # Send all notifications in parallel
-        results = await asyncio.gather(*[handler.send_stock_alert(sku, price, url, in_stock) for handler in self.handlers], return_exceptions=True)
+        results = await asyncio.gather(*[handler.send_stock_alert(product_name, price, url, in_stock) for handler in self.handlers], return_exceptions=True)
         
         for result in results:
             if isinstance(result, BaseException):
@@ -81,11 +94,11 @@ class NotificationManager:
                 print(f"[{get_timestamp()}] ❌ {result.__class__.__name__} while sending stock alert:")
                 traceback.print_exception(result)
     
-    async def send_status_update(self, message: str) -> None:
+    async def send_status_update(self, data: Dict[str, Any]) -> None:
         """Send status update to all handlers"""
         for handler in self.handlers:
             try:
-                await handler.send_status_update(message)
+                await handler.send_status_update(data)
             except Exception as e:
                 print(f"[{get_timestamp()}] ❌ Error in {handler.__class__.__name__}: {str(e)}")
     
@@ -131,4 +144,3 @@ class NotificationManager:
                     print(f"[{get_timestamp()}] ❌ Failed to load handler {module_name}: {str(e)}")
         
         return manager
-    
