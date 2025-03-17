@@ -1,0 +1,21 @@
+{
+    "locale_config": {
+        "locale": "en-gb",
+        "currency": "\u00a3",
+        "country": "United Kingdom"
+    },
+    "product_config_cards": {
+        "NVIDIA RTX 5090": {
+            "enabled": true,
+            "sku": "SCANNVGFFE5090"
+        },
+        "NVIDIA RTX 5080": {
+            "enabled": false,
+            "sku": "5080SCANNVGFFE"
+        },
+        "NVIDIA RTX 5070": {
+            "enabled": false,
+            "sku": "NVGFT570"
+        }
+    }
+}
