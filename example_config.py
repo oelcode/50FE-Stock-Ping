@@ -15,24 +15,23 @@ SOUND_CONFIG = {
 }
 
 # =================================
-# Script Health Updates Configuration
-# This sends a notification to the console and/or Telegram to show you that the script is still running properly.
+# PERIODIC STATUS UPDATES CONFIGURATION
+# This sends a notification to the console and/or your configured platforms to show you that the script is still running properly.
 # THIS IS NOT THE STOCK NOTIFIER.
 # =================================
 STATUS_UPDATES = {
     "enabled": False,  # Enable/disable script health updates
     "interval": 60 * 60,  # Console script health update interval in seconds (1 hour default - edit the first number)
 }
-
-CONSOLE_CONFIG = {
-    "enabled": True,
-    "log_stock_checks": False
-}
 # =================================
 # NOTIFICATION API CONFIGURATION
 # These are the notification services that will be used to send notifications when stock is found.
 # You can enable multiple services at once.
 # =================================
+CONSOLE_CONFIG = { # Enables showing updates in the console. RECOMMEND THIS IS KEPT ENABLED
+    "enabled": True, 
+    "log_stock_checks": False # Show each stock check in the console. (Default = False)
+}
 NTFY_CONFIG = {
     "enabled": False,
     "server_url": "https://ntfy.sh",  # ntfy server URL
@@ -52,7 +51,7 @@ HOMEASSISTANT_CONFIG = {
     "critical_alerts_volume": 1.0  # Volume level for critical alerts (0.0 to 1.0) - default is 1.0
 }
 
-TELEGRAM_CONFIG = {
+TELEGRAM_CONFIG = { # You'll need your own bot: https://docs.radist.online/docs/our-products/radist-web/connections/telegram-bot/instructions-for-creating-and-configuring-a-bot-in-botfather
     "enabled": False,             # WARNING DONT USE AUTO BROWSER OPEN AT THE SAME TIME - SEE README
     "bot_token": "XXXXXXXX",  # Your bot token
     "chat_id": "XXXXXXXX",        # Your chat ID
