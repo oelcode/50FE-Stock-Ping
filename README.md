@@ -1,13 +1,10 @@
-
----
-
 # Nvidia 50 Series Founders Edition Stock Checker
 
-A Python script to monitor 50 Series Founders Edition graphics card stock, allowing you to immediately open a browser window to the product page and/or send notifications via Telegram when stock changes are detected.
+A Python script to monitor 50 Series Founders Edition graphics card stock, allowing you to immediately open a browser window to the product page and/or send notifications through multiple channels when stock changes are detected.
 
-The script supports checking of all currently known 50 series Founders Edition, customizable check intervals (10 secs default), and notifications via sound, browser opening, and Telegram messages.
+The script supports checking of all currently known 50 series Founders Edition, customizable check intervals (10 secs default), and notifications via sound, browser opening, Telegram messages, NTFY, Home Assistant, and Discord.
 
-#### Supported Locales
+## Supported Locales
 | Country         | Locale  | Currency | Notes |
 |----------------|--------|----------|------------------------------------------------|
 | 🇦🇹 Austria        | de-at  | €        |                                                |
@@ -27,23 +24,25 @@ The script supports checking of all currently known 50 series Founders Edition, 
 
 ## Features
 
-- **NEW - Support for all known locales**: The script has been updated to support all known locales.
-- **NEW - Quick config tool**: The new 'stockconfig.py' tool allows a quick way to ensure your config is properly setup to monitor the card(s) you want, and from the correct Nvidia store.
+- **Multi-Channel Notifications**: Get stock alerts via console, Telegram, NTFY, Home Assistant, and Discord.
+- **Quick Configuration Tool**: Use 'stockconfig.py' to easily set up monitoring for specific cards and locales.
+- **Automatic SKU Detection**: The script detects SKU changes and name changes automatically to maintain monitoring continuity.
 - **Real-time Stock Monitoring**: Continuously checks NVIDIA's API for stock updates.
 - **Sound Alerts**: Plays a notification sound when stock is detected (Windows and macOS supported).
-- **Browser Auto Opening**: Automatically opens the product page in your browser when stock is detected.
-- **Status Updates**: Provides periodic status updates via console or Telegram.
-- **Telegram Notifications**: Sends alerts when stock status changes (e.g., in stock or out of stock).
-- **Telegram Status Checking**: Use the `/status` command in Telegram to get the current status of the stock checker.
-- **SKU Validation**: Periodically (configurable) checks the API for updates to product information. Nvidia occasionally change this, so the script will warn you every 5 minutes for 25 minutes if there is a mismatch between the API information and the local configuration. Run 'stockconfig.py' to update your configuration
+- **Browser Auto Opening**: Automatically opens the product page in your browser when stock is detected (see ⚠️IMPORTANT BROWSER AUTO OPEN NOTICE⚠️ below).
+- **Status Updates**: Provides periodic status updates via configured notification channels.
+- **Telegram Command Support**: Use the `/status` command in Telegram to get the current status of the stock checker.
+- **Advanced Error Handling**: Robust error recovery and graceful shutdown capabilities.
 
 ---
 
 ## Prerequisites
 
 - Python 3.8 or higher
-- A Telegram bot token and chat ID (for Telegram notifications)
-- Required Python packages: `requests` & `python-telegram-bot`
+- Required Python packages:
+  - `requests` and `aiohttp` (core dependencies)
+  - `python-telegram-bot` (for Telegram notifications)
+  - `discord-webhook` (for Discord notifications)
 
 ---
 
@@ -54,21 +53,29 @@ The script supports checking of all currently known 50 series Founders Edition, 
    50check.py
    example_config.py
    stockconfig.py
-   locales.txt
+   handlers.py
+   locales.json
    ```
 
 2. **Install dependencies**:
    ```bash
-   pip install requests
-   pip install python-telegram-bot - Not required if you don't want to use the Telegram feature. Just ensure all configs are disabled.
+   pip install requests aiohttp
+   
+   # For specific notification methods (install as needed):
+   pip install python-telegram-bot  # For Telegram notifications
+   pip install discord-webhook  # For Discord notifications
    ```
 
 3. **Configure the script**:
    - Copy `example_config.py` to `config.py`:
    ```bash
-     cp config.example.py config.py
+     cp example_config.py config.py
    ```
-   - Edit `config.py` to your preference. Refer the configuration section as well as documentation in `example_config.py` on configuration options.
+   - Run the configuration tool to set up your preferences:
+   ```bash
+     python stockconfig.py
+   ```
+   - Edit `config.py` to configure notification methods and other settings.
 
 ## Installation - METHOD 2
 
@@ -80,28 +87,44 @@ The script supports checking of all currently known 50 series Founders Edition, 
 
 2. **Install dependencies**:
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements.txt  # Installs all required dependencies from requirements.txt
    ```
 
 3. **Configure the script**:
-   - Copy the `config.example.py` file to `config.py`:
+   - Copy the example config file:
      ```bash
-     cp config.example.py config.py
+     cp example_config.py config.py
      ```
-   - Edit `config.py` to your preference. Refer the configuration section as well as documentation in `example_config.py` on configuration options.
+   - Run the configuration tool:
+     ```bash
+     python stockconfig.py
+     ```
+   - Edit `config.py` to configure notification methods and other settings.
 
 ---
 
 ## Configuration
 
-The `config.py` file contains all the configuration options. Here are the key settings:
+### Primary Configuration Files
 
-- **`PRODUCT_CONFIG_CARDS`**: Set the enabled flag for the cards you want to monitor.
-- **`NOTIFICATION_CONFIG`**: Enable or disable sound notifications, browser auto open, and logging of stock checks.
-- **`TELEGRAM_CONFIG`**: All Telegram features are turned off by default. Configure your Telegram bot token and chat ID ([Setup guide](https://gist.github.com/nafiesl/4ad622f344cd1dc3bb1ecbe468ff9f8a)).
-- **`API_CONFIG`**: Configure the NVIDIA API URL and parameters. (DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING).
-- **`SKU_CHECK_CONFIG`**: Configure the interval for refreshing SKUs (default: 3600 seconds).
-- **`NTFY_CONFIG`**: Configure notifications via NTFY. Turned off by default. At minimum, set a topic to publish to. Refer to ([NTFY Docs](https://docs.ntfy.sh/)) for more information.
+- **`products.json`**: Contains locale settings and product configurations. Generated by the `stockconfig.py` tool.
+- **`config.py`**: Contains notification settings, API configuration, and script behavior settings.
+
+### Main Configuration Sections
+
+- **`NOTIFICATION_CONFIG`**: Enable/disable sound notifications and browser auto-open.
+- **`STATUS_UPDATES`**: Configure periodic status updates to show the script is running.
+- **`CONSOLE_CONFIG`**: Configure console output behavior and logging level.
+- **Notification Service Configs**:
+  - `TELEGRAM_CONFIG`: Settings for Telegram notifications
+  - `DISCORD_CONFIG`: Settings for Discord notifications
+  - `NTFY_CONFIG`: Settings for NTFY notifications
+  - `HOMEASSISTANT_CONFIG`: Settings for Home Assistant notifications
+
+### Advanced Configuration
+
+- **`SKU_CHECK_CONFIG`**: Controls how often the script validates product information against the NVIDIA API (default: 1 hour).
+- **`API_CONFIG`**: Contains API endpoints, default parameters, and headers (modify only if you know what you're doing).
 
 ---
 
@@ -109,19 +132,17 @@ The `config.py` file contains all the configuration options. Here are the key se
 
 *Note 1*
 
-This script was built with the understanding that the links provided to you are uniquely generated. Until I can confirm otherwise, you should be very careful about using BOTH the auto browser open feature and the Telegram notification at the same time.
+This script was built with the understanding that the links provided to you are uniquely generated. Until this can be confirmed otherwise, you should be very careful about using BOTH the auto browser open feature and remote notifications at the same time.
 
-"Why?" I hear you ask - well if the link is unique, if it has automatically opened in your browser, then it's probably not going to work for you if you open it from Telegram on another device.
+"Why?" I hear you ask - well if the link is unique, if it has automatically opened in your browser, then it's probably not going to work for you if you open it from Telegram or another notification service on another device.
 
-So, if your main use case is that you want to open the link from Telegram (you might not be at the machine running the script when the stock ping arrives), then DISABLE the auto browser open in config.py
+So, if your main use case is that you want to open the link from a notification service (you might not be at the machine running the script when the stock ping arrives), then DISABLE the auto browser open in config.py:
 
 `"open_browser": False,`
 
-This will stop the browser from auto-opening the new links, but will still send them to you via Telegram.
-
 *Note 2*
 
-If you have the browser auto-open enabled, I'd strongly recommend running the script with the "--test" arg at least once. This will let you test to see if the browser opens correctly (it uses your default OS browser). After the configured cooldown period, the script will run in normal mode, so feel free to start using the "--test" arg every time for safety. There are a lot more args listed below, mostly used for me to test things work with the script, but I left them in the code in case you find them useful.
+If you have the browser auto-open enabled, it's strongly recommended to run the script with the "--test" arg at least once. This will let you test to see if the browser opens correctly (it uses your default OS browser).
 
 ---
 
@@ -129,15 +150,13 @@ If you have the browser auto-open enabled, I'd strongly recommend running the sc
 
 ### Running the Script
 
-Before you start monitoring for stock, you need to run the quick config tool to setup your configuration options. This contains a list of known working locale options for you to choose from, but you can also enter a custom locale to check if it works.
+Before you start monitoring for stock, you need to run the configuration tool to set up your locale and product preferences:
 
 ```bash
 python stockconfig.py
 ```
 
-Once this has been done, you may edit 'config.py' for any further configuration before you may need (interval timings, Telegram bot credentials etc).
-
-When you're ready to run the script, run the below command:
+Then run the stock checker:
 
 ```bash
 python 50check.py
@@ -145,26 +164,14 @@ python 50check.py
 
 ### Command-Line Arguments
 
-The script supports several command-line arguments for customization. Most users should set their configuration via "config.py". The Command-line args are simply for customising checks on the fly, without having to keep editing "config.py".
-
 | Argument               | Description                                                                 |
 |------------------------|-----------------------------------------------------------------------------|
 | `--test`               | Run in test mode to check the notification system.                          |
 | `--list-cards`          | List all available cards and exit.                                           |
-| `--cooldown`           | Cooldown period in seconds after finding stock (default: 10).               |
-| `--check-interval`     | Time between checks in seconds (default: 60).                               |
-| `--console-status`     | Enable console status updates.                                              |
-| `--no-console-status`  | Disable console status updates.                                             |
-| `--console-interval`   | Time between console status updates in seconds.                             |
-| `--telegram-status`    | Enable Telegram status updates.                                             |
-| `--no-telegram-status` | Disable Telegram status updates.                                            |
-| `--telegram-interval`  | Time between Telegram status updates in seconds.                            |
-| `--telegram-token`     | Telegram bot token (overrides configuration).                               |
-| `--telegram-chat-id`   | Telegram chat ID (overrides configuration).                                 |
-| `--no-sound`           | Disable notification sounds.                                                |
-| `--no-browser`         | Disable automatic browser opening.                                          |
+| `--cooldown`           | Cooldown period in seconds after finding stock (default: from config).               |
+| `--check-interval`     | Time between checks in seconds (default: from config).                               |
 | `--sku-check-interval` | Time between API product validation checks in seconds (default: 3600).                         |
-| `--log-stock-checks`   | Toggle the logging of stock checks to the console.                              |
+| `--no-browser`         | Disable automatic browser opening.                                          |
 
 ### Example Commands
 
@@ -183,20 +190,9 @@ The script supports several command-line arguments for customization. Most users
    python 50check.py --check-interval 30 --cooldown 5
    ```
 
-4. **Enable logging of stock checks**:
-   ```bash
-   python 50check.py --log-stock-checks
-   ```
-
 ---
 
-## Telegram Commands
-
-- **`/status`**: Get the current status of the stock checker, including uptime, # of API requests, and the cards being monitored.
-
----
-
-## Notifications
+## Notification Support
 
 ### Telegram Notifications
 
@@ -209,9 +205,32 @@ When stock changes are detected, the script sends a Telegram message like this:
 🔗 Link: https://www.nvidia.com/en-gb/geforce/graphics-cards/50-series/rtx-5090/
 ```
 
+Telegram Commands:
+- **`/status`**: Get the current status of the stock checker, including uptime, # of API requests, and the cards being monitored.
+
 ### NTFY Notifications
 
-When stock changes are detected, the script sends a NTFY message to your topic similar to Telegram. 
+When stock changes are detected, the script sends a NTFY message to your configured topic with similar information to the Telegram message.
+
+### Home Assistant Notifications
+
+The script can send notifications to your Home Assistant instance, including critical alerts that can override Do Not Disturb settings on your device. 
+
+Critical alerts can be configured in the `HOMEASSISTANT_CONFIG` section of your `config.py` file:
+```python
+HOMEASSISTANT_CONFIG = {
+    "enabled": True,
+    "ha_url": "http://your-home-assistant-url:8123",
+    "ha_token": "your-long-lived-access-token",
+    "notification_service": "mobile_app_your_device_name",
+    "critical_alerts_enabled": True,  # Set to True to enable critical alerts
+    "critical_alerts_volume": 1.0     # Volume level for critical alerts (0.0 to 1.0)
+}
+```
+
+### Discord Notifications
+
+Stock alerts and status updates can be sent to a Discord channel via webhooks.
 
 ### Sound Notifications
 
@@ -221,30 +240,51 @@ When stock changes are detected, the script sends a NTFY message to your topic s
 
 ### Browser Automation
 
-If enabled, the script will automatically open the product page in your default browser when stock is detected.
+If enabled, the script will automatically open the product page in your default browser when stock is detected. 
+
+⚠️ Please refer to the "IMPORTANT BROWSER AUTO OPEN NOTICE" section above before using this feature, especially if you're also using remote notification services.
 
 ---
 
-## Example Output
-
-### Console Output
+## Example Console Output
 
 ```
-[2023-10-25 14:35:47] ℹ️ Checking stock for GeForce RTX 5090...
-[2023-10-25 14:35:47] ✅ IN STOCK: GeForce RTX 5090 - £1,939.00
-[2023-10-25 14:35:47] 🔗 NVIDIA Link: https://www.nvidia.com/en-gb/geforce/graphics-cards/50-series/rtx-5090/
+[2025-03-17 14:35:47] Stock checker started. Monitoring for changes...
+[2025-03-17 14:35:47] Product config succesfully loaded from products.json
+[2025-03-17 14:35:47] Monitored Country: United States ($)
+[2025-03-17 14:35:47] Monitoring Cards: NVIDIA RTX 5090, NVIDIA RTX 5080
+[2025-03-17 14:35:47] Check Interval: 10 seconds
+[2025-03-17 14:35:47] Cooldown Period: 120 seconds
+[2025-03-17 14:35:47] SKU Check Interval: 3600 seconds
+[2025-03-17 14:35:47] Browser Opening: Enabled
+[2025-03-17 14:35:47] Tip: Run with --test to test notifications
+[2025-03-17 14:35:47] Tip: Run with --list-cards to see all available cards
+[2025-03-17 14:35:47] 🚀 Performing initial SKU check...
+[2025-03-17 14:35:47] 📋 Current SKU's listed on API: GeForce RTX 5090 (NVGFT590), GeForce RTX 5080 (NVGFT580)
+[2025-03-17 14:35:47] ✅ Initial SKU check complete
+[2025-03-17 14:35:47] ℹ️ Checking stock for GeForce RTX 5090
+[2025-03-17 14:35:47] ✅ IN STOCK: GeForce RTX 5090 - $1,999.00
 ```
 
-### Telegram Startup Message
+---
 
-```
-🚀 NVIDIA Stock Checker Started Successfully!
-🎯 Monitoring: GeForce RTX 5090, GeForce RTX 5080
-⏱️ Check Interval: 10 seconds
-🔔 Notifications: Enabled
-🌐 Browser Opening: Enabled
-📢 Type /status to get the latest script statistics.
-```
+## Advanced Features
+
+### Automatic Product Information Updates
+
+The script periodically checks NVIDIA's API to ensure that it's tracking the correct products. It can detect both:
+- **Name Changes**: When a product's display name changes but the SKU remains the same.
+- **SKU Changes**: When a product's SKU changes but the display name remains the same.
+
+When changes are detected, the script automatically updates its internal tracking and notifies you about these changes.
+
+### Graceful Error Handling
+
+The script includes robust error handling to recover from temporary API issues, network problems, and unexpected responses. It will continue attempting to monitor stock even after encountering errors.
+
+### Graceful Shutdown
+
+The script can be safely terminated using Ctrl+C or by sending standard termination signals. It will properly close all notification channels before exiting.
 
 ---
 
@@ -258,14 +298,6 @@ Contributions are welcome! If you'd like to contribute, please follow these step
 
 ---
 
-## To do
-
-- Add proxy functionality to help spread API requests across multiple IP's (in case Nvidia start blocking IP's for hammering their API - sorry Nvidia!).
-- Add support for more regions and currencies - the list is being updated as they are discovered.
-- Improve error handling for API rate limiting - Currently, failed checks are handled quietly, and the script keeps retrying until it works again. This hasn't been a big issue as the API seems to be quite robust, but I want to be prepared in case Nvidia get stricter.
-
----
-
 ## Disclaimer
 
 This script is for educational and personal use only. The author is not responsible for any misuse or damages caused by this script. Use at your own risk.
@@ -273,5 +305,3 @@ This script is for educational and personal use only. The author is not responsi
 ---
 
 Good luck! 🚀
-
----
