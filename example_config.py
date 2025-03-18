@@ -3,6 +3,14 @@ import os
 import sys
 
 # =================================
+# Core Timing Configuration
+# Key settings that control the stock checking behavior
+# =================================
+API_CHECK_INTERVAL = 10  # Seconds between stock checks (10 secs default)
+COOLDOWN_PERIOD = 120  # Seconds to wait after finding stock before resuming checks (120 seconds default)
+SKU_CHECK_INTERVAL = 1  # How often to check the Nvidia API for product info changes (in hours, default is 1 hour)
+
+# =================================
 # Core Notification Configuration
 # =================================
 NOTIFICATION_CONFIG = {
@@ -11,31 +19,31 @@ NOTIFICATION_CONFIG = {
 }
 
 SOUND_CONFIG = {
-    "enabled": True, # Enable/disable sound notifications - MUST BE SAME AS "play_sound" IN NOTIFICATION_CONFIG
+    "enabled": True,
 }
 
 # =================================
-# PERIODIC STATUS UPDATES CONFIGURATION
-# This sends a notification to the console and/or your configured platforms to show you that the script is still running properly.
+# Script Health Updates Configuration
 # THIS IS NOT THE STOCK NOTIFIER.
 # =================================
-STATUS_UPDATES = {
-    "enabled": False,  # Enable/disable script health updates
-    "interval": 60 * 60,  # Console script health update interval in seconds (1 hour default - edit the first number)
+STATUS_UPDATES = { # This sends a notification to the console and any configured notification platforms to remind you that the script is still running properly.
+    "enabled": True,  # Enable/disable
+    "hours": 12,       # How often to send status updates (in hours)
+}
+
+CONSOLE_CONFIG = {
+    "enabled": True, # DON'T DISABLE THIS
+    "log_stock_checks": False # Enable/disable logging each stock check to the console
 }
 # =================================
-# NOTIFICATION API CONFIGURATION
+# NOTIFICATION SERVICE API CONFIGURATION
 # These are the notification services that will be used to send notifications when stock is found.
 # You can enable multiple services at once.
 # =================================
-CONSOLE_CONFIG = { # Enables showing updates in the console. RECOMMEND THIS IS KEPT ENABLED
-    "enabled": True, 
-    "log_stock_checks": False # Show each stock check in the console. (Default = False)
-}
 NTFY_CONFIG = {
     "enabled": False,
     "server_url": "https://ntfy.sh",  # ntfy server URL
-    "topic": "XXXXXX",  # The notification topic to publish to
+    "topic": "YOUR_TOPIC_HERE",  # The notification topic to publish to
     "username": "",  # Optional: Basic auth username
     "password": "",  # Optional: Basic auth password
     "access_token": "",  # Optional: Access token for authentication (OVERRIDES USERNAME/PASSWORD AUTH)
@@ -44,17 +52,17 @@ NTFY_CONFIG = {
 
 HOMEASSISTANT_CONFIG = {
     "enabled": False,
-    "ha_url": "http://homeassistant.local:8123",  # Home Assistant URL
-    "ha_token": "XXXXXXXX",  # Long-lived access token
-    "notification_service": "mobile_app_XXXXXX",  # The notification service to use
-    "critical_alerts_enabled": False,  # Whether to send in-stock alerts as critical
+    "ha_url": "http://YOUR_HA_SERVER:8123",  # Home Assistant URL
+    "ha_token": "YOUR_HA_TOKEN_HERE",  # Long-lived access token
+    "notification_service": "YOUR_NOTIFICATION_SERVICE",  # The notification service to use
+    "critical_alerts_enabled": True,  # Whether to send in-stock alerts as critical
     "critical_alerts_volume": 1.0  # Volume level for critical alerts (0.0 to 1.0) - default is 1.0
 }
 
-TELEGRAM_CONFIG = { # You'll need your own bot: https://docs.radist.online/docs/our-products/radist-web/connections/telegram-bot/instructions-for-creating-and-configuring-a-bot-in-botfather
+TELEGRAM_CONFIG = {
     "enabled": False,             # WARNING DONT USE AUTO BROWSER OPEN AT THE SAME TIME - SEE README
-    "bot_token": "XXXXXXXX",  # Your bot token
-    "chat_id": "XXXXXXXX",        # Your chat ID
+    "bot_token": "YOUR_BOT_TOKEN_HERE",  # Your bot token
+    "chat_id": "YOUR_CHAT_ID_HERE",        # Your chat ID
 }
 
 DISCORD_CONFIG = {
@@ -64,7 +72,6 @@ DISCORD_CONFIG = {
     "mention": "",  # Optional: Mention a user or a role. Format: <@user_id> or <@&role_id>
     "avatar_url": ""  # Optional: avatar URL for the webhook
 }
-
 # =================================
 # PRODUCT AND LOCALE CONFIG LOADING
 # LEAVE THIS SECTION ALONE IF YOU DON'T KNOW WHAT THIS MEANS.
@@ -99,8 +106,8 @@ API_CONFIG = {
     "url": "https://api.store.nvidia.com/partner/v1/feinventory",
     "params": {
         "locale": LOCALE_CONFIG["locale"],
-        "cooldown": 120,       # Seconds to wait after finding stock before resuming checks (120 seconds default)
-        "check_interval": 10   # Seconds between checks (10secs default)
+        "cooldown": COOLDOWN_PERIOD,  # References the variable defined at the top
+        "check_interval": API_CHECK_INTERVAL  # References the variable defined at the top
     },
     "headers": {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
@@ -114,6 +121,7 @@ SKU_CHECK_API_CONFIG = {
     "url": "https://api.nvidia.partners/edge/product/search"
 }
 SKU_CHECK_CONFIG = {
-    "interval": 3600,  # How often to check for the Nvida API for product info changes (in seconds, default is 3600 = 1 hour)
+    "interval": SKU_CHECK_INTERVAL * 3600,  # Converted from hours to seconds using the variable defined at the top
 }
+STATUS_UPDATES["interval"] = STATUS_UPDATES["hours"] * 3600 # DO NOT CHANGE.
 # LEAVE THIS SECTION ALONE IF YOU DON'T KNOW WHAT THIS MEANS.
