@@ -393,11 +393,10 @@ async def check_nvidia_stock(skus: List[str]):
     
     if not running:
         return
-        
     current_time = datetime.now()
     
     # Only send status update if we've done at least one check and 15 minutes have passed
-    if last_check_time and (current_time - last_status_update).seconds >= STATUS_UPDATES["interval"]:
+    if STATUS_UPDATES["enabled"] and last_check_time and (current_time - last_status_update).seconds >= STATUS_UPDATES["interval"]:
         last_status_update = current_time
         await notification_manager.send_status_update(generate_status_data())
     
