@@ -596,32 +596,64 @@ if __name__ == "__main__":
     
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-
-    # Register signal handlers based on the operating system
-    def setup_signal_handlers(loop):
-        # Check the platform
-        if platform.system() == "Windows":
-            # Windows only supports SIGINT and SIGTERM
-            signals = (signal.SIGTERM, signal.SIGINT)
-        else:
-            # Unix/Linux/MacOS supports additional signals
+    
+    # Windows-friendly approach to handling shutdown
+    if platform.system() == "Windows":
+        # For Windows, we'll set up a basic try/except to catch KeyboardInterrupt (Ctrl+C)
+        try:
+            loop.run_until_complete(main())
+        except KeyboardInterrupt:
+            print(f"\n[{get_timestamp()}] 🛑 Received keyboard interrupt, cleaning up...")
+            try:
+                # Set running to False to stop the main loop
+                running = False
+                
+                # Run the shutdown coroutine and wait for all tasks to complete
+                loop.run_until_complete(shutdown(signal.SIGINT, loop))
+                
+                # Cancel any remaining tasks
+                tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
+                if tasks:
+                    for task in tasks:
+                        task.cancel()
+                    # Allow tasks to process their cancellation
+                    try:
+                        loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+                    except asyncio.CancelledError:
+                        pass
+            except Exception as e:
+                print(f"[{get_timestamp()}] ⚠️ Error during shutdown: {e}")
+        except asyncio.CancelledError:
+            pass
+        finally:
+            print(f"[{get_timestamp()}] Successfully shutdown")
+            # Wait a moment before closing the loop to allow tasks to clean up
+            time.sleep(1)
+            try:
+                loop.run_until_complete(loop.shutdown_asyncgens())
+            except:
+                pass
+            loop.close()
+    else:
+        # Unix-like systems can use the normal signal handler approach
+        def setup_signal_handlers(loop):
+            # Unix/Linux/MacOS supports these signals
             signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+            
+            # Add signal handlers
+            for sig in signals:
+                loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(shutdown(s, loop)))
         
-        # Add signal handlers
-        for sig in signals:
-            loop.add_signal_handler(sig.value, lambda s=sig: asyncio.create_task(shutdown(s, loop)))
-    
-    # Call the setup_signal_handlers function to register the handlers
-    setup_signal_handlers(loop)
-    
-    # Run the main async loop
-    try:
-        loop.run_until_complete(main())
-    except asyncio.CancelledError:
-        # Finish running the remaining tasks
-        pending = asyncio.all_tasks(loop)
-        loop.run_until_complete(asyncio.gather(*pending))
-        pass
-    finally:
-        print(f"[{get_timestamp()}] Successfully shutdown")
-        loop.close()
+        # Set up signal handlers
+        setup_signal_handlers(loop)
+        
+        # Run the main async loop
+        try:
+            loop.run_until_complete(main())
+        except asyncio.CancelledError:
+            # Finish running the remaining tasks
+            pending = asyncio.all_tasks(loop)
+            loop.run_until_complete(asyncio.gather(*pending))
+        finally:
+            print(f"[{get_timestamp()}] Successfully shutdown")
+            loop.close()
